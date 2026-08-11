@@ -1,0 +1,17 @@
+{
+  "name": "whereami-backend",
+  "version": "1.0.0",
+  "description": "Firestore ingest backend for the WhereAmI Android app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": "true",
+  "devDependencies": {
+    "firebase-tools": "^15.26.0"
+  }
+}
