@@ -63,9 +63,11 @@ service cloud.firestore {
     match /access/{userEmail} {
       allow get: if signedIn() && (userEmail == email() || isAdmin());
       allow list: if isAdmin();
-      allow write: if isAdmin()
-        // Never let an admin lock every admin out of the project.
-        && !(userEmail == email() && request.method == 'delete');
+      allow create, update: if isAdmin();
+      // An admin must not be able to delete their own grant: with no admin
+      // left, /access becomes unwritable and only the database owner could
+      // repair it.
+      allow delete: if isAdmin() && userEmail != email();
     }
 
     match /config/{document} {
