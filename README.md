@@ -19,6 +19,9 @@ App Android ──POST form──> ingest (asia-southeast1) ──Admin SDK─�
 | `functions/src/auth.ts` | Kiểm tra shared token trong URL |
 | `firestore.rules` | Chặn mọi truy cập trực tiếp từ client |
 | `firestore.indexes.json` | Index collection-group cho `positions` |
+| `functions/src/bootstrap.ts` | Tạo admin đầu tiên, tự vô hiệu sau đó |
+| `web/` | Trang xem lộ trình trên bản đồ (React + Leaflet) |
+| `web/src/map/track.ts` | Lọc, sắp xếp, cắt đoạn, đơn giản hoá đường (thuần, có test) |
 | `test-ingest.sh` | Gửi đúng các loại request mà SDK gửi |
 
 ## Triển khai
@@ -214,3 +217,62 @@ Vòng `syncLoop` trong `TrackerEngine.kt` của SDK chỉ `peek()` phần tử �
 Một thiết bị báo mỗi 5 phút ≈ 8.600 lượt gọi/tháng, mỗi lượt 1 read + 2 write.
 Free tier: 2 triệu lượt gọi/tháng, 20.000 write + 50.000 read mỗi ngày.
 Còn rất xa mới chạm trần.
+
+
+## Trang xem bản đồ
+
+<https://whereami-1c55e.web.app>
+
+React + Leaflet + tile OpenStreetMap, đọc thẳng Firestore qua Firebase Auth.
+
+### Phân quyền
+
+Quyền gắn theo **địa chỉ e-mail**, nên cấp được cho người chưa từng đăng nhập.
+
+```
+access/{email}    { role: 'admin' | 'viewer', addedBy, addedAt }
+config/access     { allowAllAuthenticated: bool }
+config/map        mặc định hiển thị cho mọi viewer
+```
+
+- Tài khoản chưa được cấp quyền vẫn đăng nhập được, nhưng thấy màn hình báo
+  cần liên hệ quản trị viên.
+- Admin quản lý danh sách ngay trong tab **Quản trị** của web.
+- Công tắc **Mở cho tất cả** cho phép mọi tài khoản Google đăng nhập đều xem
+  được, không cần có tên trong danh sách.
+
+### Tạo admin đầu tiên
+
+Rules chỉ cho admin ghi vào `access/`, mà lúc đầu chưa có admin nào. Endpoint
+`bootstrap` giải quyết đúng một lần:
+
+```bash
+curl -X POST -d "email=ban@gmail.com" \
+  https://asia-southeast1-whereami-1c55e.cloudfunctions.net/bootstrap/<TOKEN>
+```
+
+Sau khi đã có admin, endpoint này chỉ còn trả 409 nên không phải cửa hậu.
+
+### Cài đặt hiển thị
+
+Mọi lựa chọn gây tranh cãi đều là setting, không hard-code. Mặc định nằm ở
+`config/map` (admin sửa được ngay trên web, không cần deploy lại), mỗi người
+xem có thể ghi đè riêng và lưu trong localStorage của trình duyệt mình.
+
+Đáng chú ý là **cách xử lý khoảng trống**: khi máy đứng yên, SDK tắt GPS nên
+dữ liệu có lỗ hổng hàng giờ. `gapBehavior` chọn giữa *ngắt đoạn* (đúng với dữ
+liệu thật) và *nối thẳng* (đường liền mạch nhưng là suy đoán). Số liệu thống kê
+không đổi giữa hai chế độ.
+
+`tileUrl` cũng nằm trong remote config, nên đổi nhà cung cấp bản đồ chỉ là sửa
+một ô trong tab Quản trị.
+
+### Phát triển tại chỗ
+
+```bash
+cd whereami_backend/web && npm install && npm run dev
+```
+
+```bash
+cd whereami_backend/web && npm test
+```

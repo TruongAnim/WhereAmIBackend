@@ -1,13 +1,80 @@
 rules_version = '2';
 
-// Every write arrives through the `ingest` Cloud Function, which uses the
-// Admin SDK and bypasses these rules entirely. No client - web, mobile or
-// REST - may touch the data directly.
+// Position data is written only by the `ingest` Cloud Function through the
+// Admin SDK, which bypasses these rules. Everything below governs the web
+// viewer.
 //
-// If the app later needs to read history back, add a narrowly scoped
-// `allow read` here guarded by request.auth.uid instead of loosening this.
+// Access is keyed by e-mail rather than uid so an admin can grant someone
+// access before that person has ever signed in.
+//
+//   /access/{email}   { role: 'admin' | 'viewer', addedBy, addedAt, note }
+//   /config/access    { allowAllAuthenticated: bool }
+//   /config/map       default map settings for every viewer
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+
+    function accessDoc() {
+      return /databases/$(database)/documents/access/$(email());
+    }
+
+    function isListed() {
+      return signedIn() && exists(accessDoc());
+    }
+
+    function isAdmin() {
+      return isListed() && get(accessDoc()).data.role == 'admin';
+    }
+
+    // The open-door switch. Guarded by exists() because get() on a missing
+    // document aborts the whole rule evaluation.
+    function openToEveryone() {
+      return exists(/databases/$(database)/documents/config/access)
+        && get(/databases/$(database)/documents/config/access).data.allowAllAuthenticated == true;
+    }
+
+    function canView() {
+      return signedIn() && (isListed() || openToEveryone());
+    }
+
+    // Tracking data: read-only, and only for authorised accounts.
+    match /devices/{deviceId} {
+      allow read: if canView();
+      allow write: if false;
+
+      match /positions/{positionId} {
+        allow read: if canView();
+        allow write: if false;
+      }
+    }
+
+    // Any signed-in account may read its own entry - that is how the web app
+    // tells "not authorised yet" apart from "authorised". Reading the whole
+    // collection, and every write, is admin-only.
+    match /access/{userEmail} {
+      allow get: if signedIn() && (userEmail == email() || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin()
+        // Never let an admin lock every admin out of the project.
+        && !(userEmail == email() && request.method == 'delete');
+    }
+
+    match /config/{document} {
+      // Every signed-in account needs config/access to learn whether the
+      // open-door switch is on; map defaults are equally harmless.
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

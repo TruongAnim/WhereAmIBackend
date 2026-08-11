@@ -13,6 +13,8 @@ import { IngestRecord, parseRecord, positionDocId } from "./parse";
 
 initializeApp();
 
+export { bootstrap } from "./bootstrap";
+
 /**
  * Shared secret carried in the ingest URL. The SDK cannot send custom headers,
  * so the token has to travel in the path or query string of `serverUrl`.

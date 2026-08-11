@@ -7,6 +7,14 @@
         { "fieldPath": "deviceId", "order": "ASCENDING" },
         { "fieldPath": "time", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "positions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "heartbeat", "order": "ASCENDING" },
+        { "fieldPath": "time", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
