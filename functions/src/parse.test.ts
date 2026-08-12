@@ -145,3 +145,70 @@ test("keeps heartbeats and alarms from colliding with a fix in the same second",
 test("strips unsafe characters from an alarm used in a document id", () => {
   assert.equal(positionDocId(parsed({ alarm: "a/b" })), `123456_${TIME_SECONDS}_ab`);
 });
+
+test("parses device telemetry alongside the fix", () => {
+  const record = parsed({
+    activity: "walking",
+    activity_confidence: "88",
+    network: "wifi",
+    carrier: "Viettel",
+    screen: "on",
+    provider: "fused",
+    satellites: "11",
+    mock: "true",
+    battery_temperature: "31.5",
+  });
+
+  assert.equal(record.telemetry.activity, "walking");
+  assert.equal(record.telemetry.activityConfidence, 88);
+  assert.equal(record.telemetry.network, "wifi");
+  assert.equal(record.telemetry.carrier, "Viettel");
+  assert.equal(record.telemetry.screenOn, true);
+  assert.equal(record.telemetry.provider, "fused");
+  assert.equal(record.telemetry.satellites, 11);
+  assert.equal(record.telemetry.mock, true);
+  assert.equal(record.telemetry.batteryTemperature, 31.5);
+});
+
+test("leaves telemetry empty when the device sent none", () => {
+  const t = parsed().telemetry;
+  assert.equal(t.activity, null);
+  assert.equal(t.network, null);
+  assert.equal(t.carrier, null);
+  assert.equal(t.screenOn, null);
+  assert.equal(t.satellites, null);
+  assert.equal(t.mock, false);
+});
+
+test("rejects telemetry values outside the known sets", () => {
+  const t = parsed({
+    activity: "teleporting",
+    network: "carrier-pigeon",
+    screen: "maybe",
+    activity_confidence: "150",
+    satellites: "-3",
+    battery_temperature: "900",
+  }).telemetry;
+
+  assert.equal(t.activity, null);
+  assert.equal(t.network, null);
+  assert.equal(t.screenOn, null);
+  assert.equal(t.activityConfidence, null);
+  assert.equal(t.satellites, null);
+  assert.equal(t.batteryTemperature, null);
+});
+
+test("treats screen off as false rather than missing", () => {
+  assert.equal(parsed({ screen: "off" }).telemetry.screenOn, false);
+});
+
+test("caps a carrier name instead of dropping it", () => {
+  const t = parsed({ carrier: "x".repeat(200) }).telemetry;
+  assert.equal(t.carrier!.length, 64);
+});
+
+test("only treats an explicit true as a mock fix", () => {
+  assert.equal(parsed({ mock: "false" }).telemetry.mock, false);
+  assert.equal(parsed({ mock: "" }).telemetry.mock, false);
+  assert.equal(parsed({ mock: "TRUE" }).telemetry.mock, true);
+});

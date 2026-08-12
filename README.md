@@ -155,8 +155,21 @@ cd whereami_backend && ./test-ingest.sh "http://127.0.0.1:5001/demo-whereami/asi
 
 Xem dữ liệu tại <http://127.0.0.1:4000/firestore>.
 
-Muốn điện thoại thật bắn vào emulator thì thay `127.0.0.1` bằng IP LAN của máy
-Mac, và dùng `http://` (SDK chấp nhận cả http lẫn https).
+Muốn app Android bắn vào emulator thì dùng `http://10.0.2.2:5001/...` (emulator
+Android nhìn máy host qua địa chỉ này), hoặc IP LAN của máy Mac nếu là điện
+thoại thật.
+
+Android **chặn HTTP cleartext theo mặc định**, và biểu hiện duy nhất là dòng
+`Upload error: Cleartext HTTP traffic ... not permitted` trong tab Log. Bản
+debug của app đã bật `usesCleartextTraffic` sẵn cho việc này
+(`app/src/debug/AndroidManifest.xml`); bản release thì không, và chỉ nói
+chuyện được với HTTPS.
+
+Đổi URL nhanh mà không phải gõ tay:
+
+```bash
+cd /Users/truonganim/code/android/WhereAmI && ~/Library/Android/sdk/platform-tools/adb shell am start -a android.intent.action.VIEW -d "whereami://config?url=http://10.0.2.2:5001/demo-whereami/asia-southeast1/ingest/local-test-token"
+```
 
 ## Chạy unit test
 

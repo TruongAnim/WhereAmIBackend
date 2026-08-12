@@ -15,6 +15,11 @@
  *   charge    "true" | "false"     optional
  *   alarm     e.g. "sos"           only on SOS / manual position request
  *
+ * Plus device telemetry the SDK appends as extra parameters: activity,
+ * activity_confidence, network, carrier, screen, provider, satellites, mock
+ * and battery_temperature. Each is optional and each platform fills what it
+ * can, so none of them may be required.
+ *
  * No Firebase imports here on purpose: this file is unit-testable in isolation.
  */
 
@@ -45,7 +50,36 @@ export interface IngestRecord {
   alarm: string | null;
   /** True when the SDK sent a keep-alive with no coordinates. */
   heartbeat: boolean;
+  telemetry: Telemetry;
 }
+
+/**
+ * Device context recorded alongside the fix. Parsed against a fixed set of
+ * keys rather than passed through wholesale: these become Firestore fields,
+ * and an open map would let anyone holding the ingest URL define the schema.
+ */
+export interface Telemetry {
+  activity: string | null;
+  activityConfidence: number | null;
+  network: string | null;
+  carrier: string | null;
+  screenOn: boolean | null;
+  provider: string | null;
+  satellites: number | null;
+  mock: boolean;
+  batteryTemperature: number | null;
+}
+
+const ACTIVITIES = new Set([
+  "still",
+  "walking",
+  "running",
+  "on_bicycle",
+  "in_vehicle",
+  "unknown",
+]);
+
+const NETWORKS = new Set(["wifi", "cellular", "ethernet", "vpn", "other", "none"]);
 
 export type ParseResult =
   | { ok: true; record: IngestRecord }
@@ -153,7 +187,28 @@ export function parseRecord(params: Params, nowMs: number): ParseResult {
       charging: readBoolean(params, "charge"),
       alarm: alarm !== null ? alarm.slice(0, 32) : null,
       heartbeat: !hasCoordinates,
+      telemetry: parseTelemetry(params),
     },
+  };
+}
+
+function parseTelemetry(params: Params): Telemetry {
+  const activity = readString(params, "activity")?.toLowerCase() ?? null;
+  const network = readString(params, "network")?.toLowerCase() ?? null;
+  const screen = readString(params, "screen")?.toLowerCase() ?? null;
+
+  return {
+    activity: activity !== null && ACTIVITIES.has(activity) ? activity : null,
+    activityConfidence: inRange(readNumber(params, "activity_confidence"), 0, 100),
+    network: network !== null && NETWORKS.has(network) ? network : null,
+    // Operator names are free text from the SIM, so they are length-capped
+    // rather than matched against a list.
+    carrier: readString(params, "carrier")?.slice(0, 64) ?? null,
+    screenOn: screen === "on" ? true : screen === "off" ? false : null,
+    provider: readString(params, "provider")?.toLowerCase().slice(0, 32) ?? null,
+    satellites: inRange(readNumber(params, "satellites"), 0, 200),
+    mock: readString(params, "mock")?.toLowerCase() === "true",
+    batteryTemperature: inRange(readNumber(params, "battery_temperature"), -30, 100),
   };
 }
 

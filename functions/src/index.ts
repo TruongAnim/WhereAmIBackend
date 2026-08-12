@@ -128,6 +128,7 @@ async function store(record: IngestRecord): Promise<void> {
     charging: record.charging,
     alarm: record.alarm,
     heartbeat: record.heartbeat,
+    ...compact(record.telemetry as unknown as Record<string, unknown>),
     receivedAt: FieldValue.serverTimestamp(),
     expireAt,
   });
@@ -146,6 +147,11 @@ async function store(record: IngestRecord): Promise<void> {
       updatedAt: FieldValue.serverTimestamp(),
       battery: record.battery,
       charging: record.charging,
+      // Device context belongs to the moment, so the summary keeps the
+      // newest reading rather than whatever arrived last.
+      ...(isNewerFix
+        ? compact(record.telemetry as unknown as Record<string, unknown>)
+        : {}),
       ...(isNewerFix
         ? {
             lastFixTimeMs: record.timeMs,
