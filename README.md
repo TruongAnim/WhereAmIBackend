@@ -192,8 +192,9 @@ devices/{deviceId}/positions/{deviceId}_{giây}[_hb|_sos|_screen_on|_screen_off]
   time, timeMs, lat, lon, location, accuracy, altitude
   speed               m/s (wire format là knots, đã quy đổi)
   bearing, battery, charging, alarm
-  event               screen_on | screen_off — bản ghi báo sự kiện, không phải vị trí
-  heartbeat           true khi bản ghi không có toạ độ (keep-alive hoặc event)
+  event               screen_on | screen_off — bản ghi báo sự kiện, không phải fix
+  positionAge         giây — vị trí trên bản ghi event đã cũ bao lâu
+  heartbeat           true khi bản ghi không có toạ độ
   receivedAt, expireAt
 ```
 
@@ -204,11 +205,28 @@ thường rồi đè lên nhau.
 
 ### Sự kiện bật/tắt màn hình
 
-SDK gửi một bản ghi mỗi khi màn hình sáng hoặc tắt. Bản ghi **không kèm toạ
-độ** — đánh thức GPS mỗi lần mở máy tốn pin hơn nhiều so với giá trị của sự
-kiện, còn lấy vị trí cũ ra đắp vào thì là nói dối. Vì không có toạ độ nên
-`heartbeat = true`, và trang bản đồ (lọc `heartbeat == false`) tự động bỏ qua,
-không ảnh hưởng đường đi.
+SDK gửi một bản ghi mỗi khi màn hình sáng hoặc tắt, **kèm một vị trí mượn** —
+vị trí mà nền tảng đã đo sẵn, không đánh thức GPS. Đánh thức GPS mỗi lần mở
+máy tốn pin hơn nhiều so với giá trị của sự kiện.
+
+SDK lấy cái **mới nhất trong ba nguồn miễn phí**: cache của hệ thống
+(`getLastLocation`), fix gần nhất nó nhận được, và fix gần nhất nó đã ghi. Ba
+nguồn này hỏng ở những lúc khác nhau nên bù được cho nhau: lúc đang di chuyển
+cache rất tươi vì hệ thống liên tục tính; lúc đã pause thì không ai tính nữa
+nhưng máy cũng đứng yên nên fix cũ vẫn đúng.
+
+`positionAge` nói vị trí đó cũ bao nhiêu giây. **Không có nó thì bản ghi nói
+dối**, nên nó luôn được gửi kèm khi có toạ độ.
+
+Hai chỗ phải chủ động loại event ra, vì có toạ độ rồi thì nó trông y hệt một
+fix thường:
+
+- **`devices/{id}`** không nhận vị trí từ event. Vị trí đó là mượn, để nó ghi
+  đè vị trí mới nhất của thiết bị là thay một fix thật bằng một fix cũ hơn đang
+  đeo dấu thời gian mới.
+- **Đường đi trên bản đồ** bỏ qua mọi bản ghi có `event`. Nối nó vào polyline
+  là bịa ra một khúc vòng, và cộng vào "Quãng đường" là cộng thêm đoạn máy chưa
+  từng đi.
 
 `event` chỉ nhận đúng tên trong danh sách cho phép. Giá trị lạ bị bỏ và bản ghi
 trở thành keep-alive thường — người cầm được URL ingest không tự đặt được

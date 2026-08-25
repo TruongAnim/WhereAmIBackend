@@ -301,3 +301,24 @@ test("keeps an alarm ahead of an event in the document id", () => {
     `123456_${TIME_SECONDS}_sos`,
   );
 });
+
+test("records how old the position on an event was", () => {
+  const record = parsed({ event: "screen_on", position_age: "45" });
+  assert.equal(record.positionAge, 45);
+  assert.equal(parsed().positionAge, null);
+});
+
+test("rejects an implausible position age", () => {
+  assert.equal(parsed({ position_age: "-5" }).positionAge, null);
+  assert.equal(parsed({ position_age: "999999" }).positionAge, null);
+  assert.equal(parsed({ position_age: "0" }).positionAge, 0);
+});
+
+test("an event that carries coordinates is still not a heartbeat", () => {
+  // The SDK now attaches a cached position to events, so they look like
+  // fixes to anything that only checks for coordinates.
+  const record = parsed({ event: "screen_on", position_age: "12" });
+  assert.equal(record.heartbeat, false);
+  assert.equal(record.event, "screen_on");
+  assert.equal(record.lat, 10.762622);
+});

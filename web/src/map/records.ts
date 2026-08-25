@@ -28,6 +28,12 @@ export interface PositionRecord {
   alarm: string | null;
   /** screen_on, screen_off. Null on ordinary fixes. */
   event: string | null;
+  /**
+   * Seconds between when the position on this record was measured and when
+   * the record was made. Only events have one: they borrow a position the
+   * phone already had rather than taking a fresh one.
+   */
+  positionAge: number | null;
   /** True when the record carries no coordinates. */
   heartbeat: boolean;
 
@@ -103,8 +109,16 @@ export function activityLabel(activity: string): string {
   return ACTIVITY_LABELS[activity] ?? activity;
 }
 
-/** Narrows a record to the shape the map draws, or null if it has no position. */
+/**
+ * Narrows a record to the shape the map draws, or null if it does not belong
+ * on the track.
+ *
+ * Events are excluded even when they carry coordinates. The position on one
+ * was measured earlier and borrowed, so joining it to the line would invent a
+ * detour, and counting it would add distance the phone never travelled.
+ */
 export function toFix(record: PositionRecord): Fix | null {
+  if (record.event !== null) return null;
   if (record.lat === null || record.lon === null) return null;
   return {
     id: record.id,
@@ -137,6 +151,15 @@ export function formatClock(timeMs: number): string {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+/** How stale a borrowed position was, phrased for a caption. */
+export function formatAge(seconds: number): string {
+  if (seconds < 60) return `đo ${seconds} giây trước`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `đo ${minutes} phút trước`;
+  const hours = Math.round(minutes / 60);
+  return `đo ${hours} giờ trước`;
 }
 
 export function formatDateTime(timeMs: number): string {

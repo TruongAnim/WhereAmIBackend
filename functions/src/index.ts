@@ -129,6 +129,7 @@ async function store(record: IngestRecord): Promise<void> {
     charging: record.charging,
     alarm: record.alarm,
     event: record.event,
+    positionAge: record.positionAge,
     heartbeat: record.heartbeat,
     ...compact(record.telemetry as unknown as Record<string, unknown>),
     receivedAt: FieldValue.serverTimestamp(),
@@ -141,7 +142,12 @@ async function store(record: IngestRecord): Promise<void> {
     // reflects the newest fix rather than the last one to arrive.
     const snapshot = await tx.get(deviceRef);
     const previousFixMs: number = snapshot.get("lastFixTimeMs") ?? 0;
-    const isNewerFix = !record.heartbeat && record.timeMs >= previousFixMs;
+    // Events are excluded even though they now carry coordinates. The position
+    // on one was borrowed, not measured, so letting it become the device's
+    // latest known location would overwrite a real fix with an older one
+    // wearing a newer timestamp.
+    const isNewerFix =
+      !record.heartbeat && record.event === null && record.timeMs >= previousFixMs;
 
     const device = compact({
       deviceId: record.deviceId,

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   activityLabel,
+  formatAge,
   formatDateTime,
   networkLabel,
   recordKind,
@@ -90,6 +91,9 @@ export function RecordDialog({
                 icon="pin"
                 label="Toạ độ"
                 value={`${record.lat!.toFixed(6)}, ${record.lon!.toFixed(6)}`}
+                // Attached to the coordinates rather than given a row of its
+                // own, so the number cannot be read without its caveat.
+                note={record.positionAge !== null ? formatAge(record.positionAge) : undefined}
               />
               {record.accuracy !== null && (
                 <Row icon="target" label="Sai số" value={`${Math.round(record.accuracy)} m`} />

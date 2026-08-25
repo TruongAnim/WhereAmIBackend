@@ -25,6 +25,7 @@ function record(overrides: Partial<PositionRecord> = {}): PositionRecord {
     batteryTemperature: null,
     alarm: null,
     event: null,
+    positionAge: null,
     heartbeat: false,
     activity: null,
     activityConfidence: null,
@@ -82,10 +83,18 @@ test("keeps a zero battery out of the summary's blank case", () => {
 });
 
 test("narrows only records that have coordinates", () => {
-  assert.equal(toFix(record({ event: "screen_on", heartbeat: true })), null);
+  assert.equal(toFix(record({ heartbeat: true })), null);
   const fix = toFix(record({ lat: 10, lon: 106, accuracy: 12 }));
   assert.equal(fix?.lat, 10);
   assert.equal(fix?.accuracy, 12);
+});
+
+test("keeps events off the track even when they carry a position", () => {
+  // The position on an event was borrowed from an earlier measurement.
+  // Joining it to the line would invent a detour and add distance the phone
+  // never travelled.
+  const unlock = record({ lat: 10, lon: 106, event: "screen_on", positionAge: 240 });
+  assert.equal(toFix(unlock), null);
 });
 
 test("orders by device time, newest first", () => {

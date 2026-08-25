@@ -16,6 +16,8 @@
  *   alarm     e.g. "sos"           only on SOS / manual position request
  *   event     e.g. "screen_on"     only on records that report something
  *                                  other than a position
+ *   position_age seconds           only on events, which borrow a position
+ *                                  that was already measured
  *
  * Plus device telemetry the SDK appends as extra parameters: activity,
  * activity_confidence, network, carrier, screen, provider, satellites, mock
@@ -55,6 +57,14 @@ export interface IngestRecord {
    * "screen_off". Null on ordinary fixes and on keep-alives.
    */
   event: string | null;
+  /**
+   * How old the position on this record was when it was recorded, in seconds.
+   *
+   * Only events carry it. They attach a position the platform had already
+   * measured rather than taking one on the spot, so the age is the difference
+   * between "where the phone is" and "where it was last seen".
+   */
+  positionAge: number | null;
   /**
    * True when the record carries no coordinates - a keep-alive or an event.
    * The map viewer filters on this to keep positionless records off the track.
@@ -220,6 +230,9 @@ export function parseRecord(params: Params, nowMs: number): ParseResult {
       charging: readBoolean(params, "charge"),
       alarm: alarm !== null ? alarm.slice(0, 32) : null,
       event: event !== null && EVENTS.has(event) ? event : null,
+      // A day is already far past the point of being worth plotting, and the
+      // cap keeps a broken clock from writing an absurd number.
+      positionAge: inRange(readNumber(params, "position_age"), 0, 86_400),
       heartbeat: !hasCoordinates,
       telemetry: parseTelemetry(params),
       device: parseDeviceInfo(params),

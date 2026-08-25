@@ -67,6 +67,7 @@ function toRecord(snapshot: QueryDocumentSnapshot<DocumentData>): PositionRecord
     batteryTemperature: asNumber(data.batteryTemperature),
     alarm: asString(data.alarm),
     event: asString(data.event),
+    positionAge: asNumber(data.positionAge),
     heartbeat: data.heartbeat === true,
     activity: asString(data.activity),
     activityConfidence: asNumber(data.activityConfidence),
