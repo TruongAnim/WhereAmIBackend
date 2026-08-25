@@ -147,6 +147,9 @@ async function store(record: IngestRecord): Promise<void> {
       updatedAt: FieldValue.serverTimestamp(),
       battery: record.battery,
       charging: record.charging,
+      // Identity is written here alone. Repeating it in every position would
+      // be thousands of copies of strings that never change.
+      ...compact(record.device as unknown as Record<string, unknown>),
       // Device context belongs to the moment, so the summary keeps the
       // newest reading rather than whatever arrived last.
       ...(isNewerFix

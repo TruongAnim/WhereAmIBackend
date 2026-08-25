@@ -212,3 +212,41 @@ test("only treats an explicit true as a mock fix", () => {
   assert.equal(parsed({ mock: "" }).telemetry.mock, false);
   assert.equal(parsed({ mock: "TRUE" }).telemetry.mock, true);
 });
+
+test("parses device identity as separate fields", () => {
+  const d = parsed({
+    device_manufacturer: "samsung",
+    device_model: "SM-S921B",
+    device_name: "Truong's Phone",
+    os_version: "15",
+    sdk_int: "35",
+    app_version: "1.0",
+  }).device;
+
+  assert.equal(d.manufacturer, "samsung");
+  assert.equal(d.model, "SM-S921B");
+  assert.equal(d.name, "Truong's Phone");
+  assert.equal(d.osVersion, "15");
+  assert.equal(d.sdkInt, 35);
+  assert.equal(d.appVersion, "1.0");
+});
+
+test("leaves device identity empty when nothing was sent", () => {
+  const d = parsed().device;
+  assert.equal(d.manufacturer, null);
+  assert.equal(d.model, null);
+  assert.equal(d.name, null);
+  assert.equal(d.sdkInt, null);
+});
+
+test("caps device identity strings rather than dropping them", () => {
+  const d = parsed({ device_name: "x".repeat(500), device_model: "y".repeat(500) }).device;
+  assert.equal(d.name!.length, 64);
+  assert.equal(d.model!.length, 64);
+});
+
+test("rejects an implausible sdk level", () => {
+  assert.equal(parsed({ sdk_int: "0" }).device.sdkInt, null);
+  assert.equal(parsed({ sdk_int: "9999" }).device.sdkInt, null);
+  assert.equal(parsed({ sdk_int: "24" }).device.sdkInt, 24);
+});

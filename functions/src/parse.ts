@@ -51,6 +51,21 @@ export interface IngestRecord {
   /** True when the SDK sent a keep-alive with no coordinates. */
   heartbeat: boolean;
   telemetry: Telemetry;
+  /**
+   * Who the device is. Constant for the life of the app, so it belongs on the
+   * device summary and nowhere near the position history.
+   */
+  device: DeviceInfo;
+}
+
+export interface DeviceInfo {
+  manufacturer: string | null;
+  model: string | null;
+  /** Name the owner set in system settings. Often contains a person's name. */
+  name: string | null;
+  osVersion: string | null;
+  sdkInt: number | null;
+  appVersion: string | null;
 }
 
 /**
@@ -188,7 +203,25 @@ export function parseRecord(params: Params, nowMs: number): ParseResult {
       alarm: alarm !== null ? alarm.slice(0, 32) : null,
       heartbeat: !hasCoordinates,
       telemetry: parseTelemetry(params),
+      device: parseDeviceInfo(params),
     },
+  };
+}
+
+/**
+ * Free text from the platform, so these are length-capped rather than matched
+ * against a list. Kept as separate fields on purpose - joining manufacturer
+ * and model into one label is a display decision, not a storage one.
+ */
+function parseDeviceInfo(params: Params): DeviceInfo {
+  const text = (key: string, max: number) => readString(params, key)?.slice(0, max) ?? null;
+  return {
+    manufacturer: text("device_manufacturer", 48),
+    model: text("device_model", 64),
+    name: text("device_name", 64),
+    osVersion: text("os_version", 24),
+    sdkInt: inRange(readNumber(params, "sdk_int"), 1, 100),
+    appVersion: text("app_version", 32),
   };
 }
 
