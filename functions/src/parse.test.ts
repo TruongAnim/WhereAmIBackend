@@ -250,3 +250,54 @@ test("rejects an implausible sdk level", () => {
   assert.equal(parsed({ sdk_int: "9999" }).device.sdkInt, null);
   assert.equal(parsed({ sdk_int: "24" }).device.sdkInt, 24);
 });
+
+test("records a screen event as an event rather than a plain heartbeat", () => {
+  const result = parseRecord(
+    { id: "123456", timestamp: String(TIME_SECONDS), event: "screen_on" },
+    NOW,
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.record.event, "screen_on");
+  // No coordinates, so it still counts as positionless and stays off the map.
+  assert.equal(result.record.heartbeat, true);
+});
+
+test("rejects an event name the SDK never sends", () => {
+  assert.equal(parsed({ event: "rm -rf" }).event, null);
+  assert.equal(parsed({ event: "" }).event, null);
+  assert.equal(parsed({ event: "SCREEN_OFF" }).event, "screen_off");
+});
+
+test("leaves ordinary fixes without an event", () => {
+  assert.equal(parsed().event, null);
+});
+
+test("gives each screen event its own document id", () => {
+  const on = positionDocId(parsed({ event: "screen_on" }));
+  const off = positionDocId(parsed({ event: "screen_off" }));
+  const heartbeatResult = parseRecord(
+    { id: "123456", timestamp: String(TIME_SECONDS) },
+    NOW,
+  );
+  assert.equal(heartbeatResult.ok, true);
+  if (!heartbeatResult.ok) return;
+
+  assert.equal(on, `123456_${TIME_SECONDS}_screen_on`);
+  assert.equal(off, `123456_${TIME_SECONDS}_screen_off`);
+  // A screen event and a keep-alive in the same second must not overwrite
+  // each other, and neither may take the slot of a real fix.
+  assert.equal(
+    new Set([on, off, positionDocId(heartbeatResult.record), positionDocId(parsed())]).size,
+    4,
+  );
+});
+
+test("keeps an alarm ahead of an event in the document id", () => {
+  // An SOS carries both a position and the highest priority; if a screen
+  // event landed in the same second the SOS must keep its own slot.
+  assert.equal(
+    positionDocId(parsed({ alarm: "sos", event: "screen_on" })),
+    `123456_${TIME_SECONDS}_sos`,
+  );
+});

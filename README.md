@@ -188,17 +188,33 @@ devices/{deviceId}
   lastPosition        { lat, lon, accuracy, altitude, speed, bearing }
   lastAlarm           { type, time }
 
-devices/{deviceId}/positions/{deviceId}_{giây}[_hb|_sos]
+devices/{deviceId}/positions/{deviceId}_{giây}[_hb|_sos|_screen_on|_screen_off]
   time, timeMs, lat, lon, location, accuracy, altitude
   speed               m/s (wire format là knots, đã quy đổi)
   bearing, battery, charging, alarm
-  heartbeat           true khi SDK gửi keep-alive không toạ độ
+  event               screen_on | screen_off — bản ghi báo sự kiện, không phải vị trí
+  heartbeat           true khi bản ghi không có toạ độ (keep-alive hoặc event)
   receivedAt, expireAt
 ```
 
 Doc id tất định theo `deviceId_giây` để lần retry ghi đè thay vì nhân bản —
-SDK đảm bảo at-least-once chứ không phải exactly-once. Hậu tố `_hb` / `_sos`
-tránh việc heartbeat hay SOS rơi trùng giây với một fix thường rồi đè lên nhau.
+SDK đảm bảo at-least-once chứ không phải exactly-once. Hậu tố `_hb` / `_sos` /
+`_screen_on` tránh việc heartbeat, event hay SOS rơi trùng giây với một fix
+thường rồi đè lên nhau.
+
+### Sự kiện bật/tắt màn hình
+
+SDK gửi một bản ghi mỗi khi màn hình sáng hoặc tắt. Bản ghi **không kèm toạ
+độ** — đánh thức GPS mỗi lần mở máy tốn pin hơn nhiều so với giá trị của sự
+kiện, còn lấy vị trí cũ ra đắp vào thì là nói dối. Vì không có toạ độ nên
+`heartbeat = true`, và trang bản đồ (lọc `heartbeat == false`) tự động bỏ qua,
+không ảnh hưởng đường đi.
+
+`event` chỉ nhận đúng tên trong danh sách cho phép. Giá trị lạ bị bỏ và bản ghi
+trở thành keep-alive thường — người cầm được URL ingest không tự đặt được
+trường mới.
+
+Tắt bằng công tắc **Screen on/off events** trong Settings → Advanced của app.
 
 ## Vì sao mã lỗi lại chọn như vậy
 

@@ -97,6 +97,7 @@ export const ingest = onRequest(
       timeMs: record.timeMs,
       heartbeat: record.heartbeat,
       alarm: record.alarm,
+      event: record.event,
     });
     res.status(200).json({ status: "ok" });
   },
@@ -127,6 +128,7 @@ async function store(record: IngestRecord): Promise<void> {
     battery: record.battery,
     charging: record.charging,
     alarm: record.alarm,
+    event: record.event,
     heartbeat: record.heartbeat,
     ...compact(record.telemetry as unknown as Record<string, unknown>),
     receivedAt: FieldValue.serverTimestamp(),

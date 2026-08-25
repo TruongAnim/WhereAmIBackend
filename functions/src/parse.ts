@@ -14,6 +14,8 @@
  *   batt      percent 0..100       optional
  *   charge    "true" | "false"     optional
  *   alarm     e.g. "sos"           only on SOS / manual position request
+ *   event     e.g. "screen_on"     only on records that report something
+ *                                  other than a position
  *
  * Plus device telemetry the SDK appends as extra parameters: activity,
  * activity_confidence, network, carrier, screen, provider, satellites, mock
@@ -48,7 +50,15 @@ export interface IngestRecord {
   battery: number | null;
   charging: boolean | null;
   alarm: string | null;
-  /** True when the SDK sent a keep-alive with no coordinates. */
+  /**
+   * What this record reports, when it is not a position: "screen_on",
+   * "screen_off". Null on ordinary fixes and on keep-alives.
+   */
+  event: string | null;
+  /**
+   * True when the record carries no coordinates - a keep-alive or an event.
+   * The map viewer filters on this to keep positionless records off the track.
+   */
   heartbeat: boolean;
   telemetry: Telemetry;
   /**
@@ -95,6 +105,13 @@ const ACTIVITIES = new Set([
 ]);
 
 const NETWORKS = new Set(["wifi", "cellular", "ethernet", "vpn", "other", "none"]);
+
+/**
+ * Events the SDK is known to report. Matched against a list rather than stored
+ * as free text: this becomes a queryable field, and anyone holding the ingest
+ * URL would otherwise get to invent its values.
+ */
+const EVENTS = new Set(["screen_on", "screen_off"]);
 
 export type ParseResult =
   | { ok: true; record: IngestRecord }
@@ -183,6 +200,7 @@ export function parseRecord(params: Params, nowMs: number): ParseResult {
 
   const speedKnots = readNumber(params, "speed");
   const alarm = readString(params, "alarm");
+  const event = readString(params, "event")?.toLowerCase() ?? null;
 
   return {
     ok: true,
@@ -201,6 +219,7 @@ export function parseRecord(params: Params, nowMs: number): ParseResult {
       battery: inRange(readNumber(params, "batt"), 0, 100),
       charging: readBoolean(params, "charge"),
       alarm: alarm !== null ? alarm.slice(0, 32) : null,
+      event: event !== null && EVENTS.has(event) ? event : null,
       heartbeat: !hasCoordinates,
       telemetry: parseTelemetry(params),
       device: parseDeviceInfo(params),
@@ -249,16 +268,21 @@ function parseTelemetry(params: Params): Telemetry {
  * Deterministic document id so a retried upload overwrites rather than
  * duplicates. The SDK guarantees at-least-once delivery, not exactly-once.
  *
- * The wire timestamp only has second precision, so a heartbeat or an SOS can
- * land in the same second as a regular fix. The suffix keeps those apart -
- * without it the more important record could be silently overwritten.
+ * The wire timestamp only has second precision, so a heartbeat, an event or
+ * an SOS can land in the same second as a regular fix. The suffix keeps those
+ * apart - without it the more important record could be silently overwritten.
+ *
+ * Screen events in particular arrive in pairs seconds apart, and an unlock
+ * right after a heartbeat is ordinary, so each kind needs its own slot.
  */
 export function positionDocId(record: IngestRecord): string {
   const seconds = Math.floor(record.timeMs / 1000);
   const suffix = record.alarm !== null
     ? `_${record.alarm.replace(/[^A-Za-z0-9-]/g, "")}`
-    : record.heartbeat
-      ? "_hb"
-      : "";
+    : record.event !== null
+      ? `_${record.event}`
+      : record.heartbeat
+        ? "_hb"
+        : "";
   return `${record.deviceId}_${seconds}${suffix}`;
 }
