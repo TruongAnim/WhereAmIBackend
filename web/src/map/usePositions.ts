@@ -11,13 +11,17 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { toFix, type PositionRecord } from "./records";
-import { dayBounds, toIsoDate, type Fix } from "./track";
+import type { PositionRecord } from "./records";
+import { dayBounds, toIsoDate } from "./track";
 
 export interface PositionsState {
-  /** Records that carry coordinates, for the map. */
-  fixes: Fix[];
-  /** Everything stored for the day, including events and keep-alives. */
+  /**
+   * Everything stored for the day: fixes, events and keep-alives alike.
+   *
+   * Deliberately unfiltered. The kind filter lives in the view, because the
+   * map and the timeline have to be showing the same set and neither one owns
+   * that decision.
+   */
   records: PositionRecord[];
   loading: boolean;
   error: string | null;
@@ -80,12 +84,10 @@ function toRecord(snapshot: QueryDocumentSnapshot<DocumentData>): PositionRecord
   };
 }
 
-function split(snapshot: { docs: QueryDocumentSnapshot<DocumentData>[] }) {
-  const records = snapshot.docs
-    .map(toRecord)
-    .filter((r): r is PositionRecord => r !== null);
-  const fixes = records.map(toFix).filter((f): f is Fix => f !== null);
-  return { records, fixes };
+function readAll(snapshot: { docs: QueryDocumentSnapshot<DocumentData>[] }) {
+  return {
+    records: snapshot.docs.map(toRecord).filter((r): r is PositionRecord => r !== null),
+  };
 }
 
 /**
@@ -102,7 +104,6 @@ function split(snapshot: { docs: QueryDocumentSnapshot<DocumentData>[] }) {
  */
 export function usePositions(deviceId: string | null, isoDate: string): PositionsState {
   const [state, setState] = useState<PositionsState>({
-    fixes: [],
     records: [],
     loading: true,
     error: null,
@@ -111,7 +112,7 @@ export function usePositions(deviceId: string | null, isoDate: string): Position
 
   useEffect(() => {
     if (!deviceId) {
-      setState({ fixes: [], records: [], loading: false, error: null, live: false });
+      setState({ records: [], loading: false, error: null, live: false });
       return;
     }
 
@@ -125,7 +126,7 @@ export function usePositions(deviceId: string | null, isoDate: string): Position
       orderBy("time"),
     );
 
-    setState({ fixes: [], records: [], loading: true, error: null, live: isToday });
+    setState({ records: [], loading: true, error: null, live: isToday });
 
     const describe = (cause: unknown): string => {
       const code = (cause as { code?: string }).code ?? "";
@@ -143,12 +144,11 @@ export function usePositions(deviceId: string | null, isoDate: string): Position
       getDocs(positionsQuery)
         .then((snapshot) => {
           if (cancelled) return;
-          setState({ ...split(snapshot), loading: false, error: null, live: false });
+          setState({ ...readAll(snapshot), loading: false, error: null, live: false });
         })
         .catch((cause) => {
           if (cancelled) return;
           setState({
-            fixes: [],
             records: [],
             loading: false,
             error: describe(cause),
@@ -163,11 +163,10 @@ export function usePositions(deviceId: string | null, isoDate: string): Position
     const unsubscribe = onSnapshot(
       positionsQuery,
       (snapshot) => {
-        setState({ ...split(snapshot), loading: false, error: null, live: true });
+        setState({ ...readAll(snapshot), loading: false, error: null, live: true });
       },
       (cause) => {
         setState({
-          fixes: [],
           records: [],
           loading: false,
           error: describe(cause),

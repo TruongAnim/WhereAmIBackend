@@ -195,16 +195,19 @@ export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
 }
 
 /**
- * Which glyph stands for a record. Takes plain strings rather than the record
+ * Which glyph stands for a record. Takes a plain string rather than the record
  * type so the icon set stays independent of the data model.
  */
-export function recordIcon(kind: string, event: string | null): IconName {
-  if (event === "screen_off") return "moon";
+export function recordIcon(kind: string): IconName {
   switch (kind) {
     case "alarm":
       return "alert";
-    case "event":
+    case "screen_on":
       return "sun";
+    case "screen_off":
+      return "moon";
+    case "event":
+      return "radio";
     case "heartbeat":
       return "pulse";
     default:

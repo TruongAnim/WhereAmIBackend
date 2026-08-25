@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
+  KIND_COLORS,
+  KIND_LABELS,
   activityLabel,
   formatAge,
   formatDateTime,
@@ -59,9 +61,12 @@ export function RecordDialog({
         // count as a backdrop click and close on every interaction inside it.
         onClick={(e) => e.stopPropagation()}
       >
-        <header className={`modal-header kind-${kind}`}>
-          <span className={`timeline-icon kind-${kind}`}>
-            <Icon name={recordIcon(kind, record.event)} size={18} />
+        <header className="modal-header">
+          <span
+            className="timeline-icon"
+            style={{ "--kind-color": KIND_COLORS[kind] } as React.CSSProperties}
+          >
+            <Icon name={recordIcon(kind)} size={18} />
           </span>
           <div>
             <h2>{recordTitle(record)}</h2>
@@ -182,13 +187,6 @@ export function RecordDialog({
     </div>
   );
 }
-
-const KIND_LABELS: Record<string, string> = {
-  alarm: "Cảnh báo SOS",
-  event: "Sự kiện",
-  heartbeat: "Nhịp giữ kết nối",
-  fix: "Vị trí",
-};
 
 function formatDelay(millis: number): string {
   // Only reachable when the phone's clock ran ahead of the server's.

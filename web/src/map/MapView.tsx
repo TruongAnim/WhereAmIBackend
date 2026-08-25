@@ -1,46 +1,88 @@
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { MapSettings } from "../settings/settings";
+import {
+  KIND_COLORS,
+  formatAge,
+  recordKind,
+  recordTitle,
+  type PositionRecord,
+} from "./records";
 import { formatSpeed, type Fix, type Track } from "./track";
 
-const SEGMENT_COLOR = "#2563eb";
-const POINT_COLOR = "#1d4ed8";
-const ALARM_COLOR = "#dc2626";
+const SEGMENT_COLOR = KIND_COLORS.fix;
 const START_COLOR = "#16a34a";
 
-function popupHtml(fix: Fix, settings: MapSettings): string {
-  const time = new Date(fix.timeMs).toLocaleString();
-  const rows: Array<[string, string]> = [["Thời gian", time]];
-  if (fix.speed !== null) rows.push(["Tốc độ", formatSpeed(fix.speed, settings.speedUnit)]);
-  if (fix.accuracy !== null) rows.push(["Sai số", `${Math.round(fix.accuracy)} m`]);
-  if (fix.bearing !== null) rows.push(["Hướng", `${Math.round(fix.bearing)}°`]);
-  if (fix.battery !== null) {
-    rows.push(["Pin", `${fix.battery}%${fix.charging ? " (đang sạc)" : ""}`]);
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  );
+}
+
+function popupHtml(record: PositionRecord, settings: MapSettings): string {
+  const kind = recordKind(record);
+  const rows: Array<[string, string]> = [
+    ["Thời gian", new Date(record.timeMs).toLocaleString()],
+  ];
+  if (record.speed !== null) {
+    rows.push(["Tốc độ", formatSpeed(record.speed, settings.speedUnit)]);
   }
-  if (fix.alarm !== null) rows.push(["Cảnh báo", fix.alarm.toUpperCase()]);
-  rows.push(["Toạ độ", `${fix.lat.toFixed(6)}, ${fix.lon.toFixed(6)}`]);
+  if (record.accuracy !== null) rows.push(["Sai số", `${Math.round(record.accuracy)} m`]);
+  if (record.bearing !== null) rows.push(["Hướng", `${Math.round(record.bearing)}°`]);
+  if (record.battery !== null) {
+    rows.push(["Pin", `${record.battery}%${record.charging ? " (đang sạc)" : ""}`]);
+  }
+  if (record.lat !== null && record.lon !== null) {
+    rows.push(["Toạ độ", `${record.lat.toFixed(6)}, ${record.lon.toFixed(6)}`]);
+  }
+  // The one caption that keeps a borrowed position from reading as a fresh one.
+  if (record.positionAge !== null) rows.push(["Vị trí", formatAge(record.positionAge)]);
 
   const body = rows
-    .map(([label, value]) => `<tr><th>${label}</th><td>${value}</td></tr>`)
+    .map(([label, value]) => `<tr><th>${label}</th><td>${escapeHtml(value)}</td></tr>`)
     .join("");
-  return `<table class="popup">${body}</table>`;
+  const title = escapeHtml(recordTitle(record));
+  const color = KIND_COLORS[kind];
+  return (
+    `<strong style="color:${color}">${title}</strong>` +
+    `<table class="popup">${body}</table>`
+  );
 }
 
 export function MapView({
   track,
+  records,
   settings,
   autoFit,
+  selectedId,
+  onSelect,
 }: {
   track: Track;
+  /** Already filtered by kind. The map shows exactly what the timeline lists. */
+  records: readonly PositionRecord[];
   settings: MapSettings;
   autoFit: boolean;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const overlayRef = useRef<L.LayerGroup | null>(null);
+  const selectionRef = useRef<L.CircleMarker | null>(null);
   /** Guards the initial fit so panning is not stolen back on every update. */
   const fittedKeyRef = useRef<string | null>(null);
+  // Held in a ref so redrawing does not depend on the callback's identity.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+
+  const byId = useMemo(() => {
+    const map = new Map<string, PositionRecord>();
+    for (const record of records) map.set(record.id, record);
+    return map;
+  }, [records]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -57,6 +99,7 @@ export function MapView({
       mapRef.current = null;
       overlayRef.current = null;
       tileRef.current = null;
+      selectionRef.current = null;
     };
   }, []);
 
@@ -78,10 +121,18 @@ export function MapView({
     if (!map || !overlay) return;
 
     overlay.clearLayers();
+    selectionRef.current = null;
 
     const bounds = L.latLngBounds([]);
     let first: Fix | null = null;
     let last: Fix | null = null;
+
+    const attach = (layer: L.CircleMarker, record: PositionRecord | undefined) => {
+      if (record === undefined) return layer;
+      return layer
+        .bindPopup(popupHtml(record, settings))
+        .on("click", () => onSelectRef.current(record.id));
+    };
 
     for (const segment of track.segments) {
       const latLngs = segment.points.map((p) => [p.lat, p.lon] as [number, number]);
@@ -99,15 +150,16 @@ export function MapView({
       if (settings.showPoints) {
         for (const fix of segment.points) {
           if (fix.alarm !== null && settings.showAlarms) continue; // drawn below
-          L.circleMarker([fix.lat, fix.lon], {
-            radius: 4,
-            color: POINT_COLOR,
-            weight: 1,
-            fillColor: "#ffffff",
-            fillOpacity: 1,
-          })
-            .bindPopup(popupHtml(fix, settings))
-            .addTo(overlay);
+          attach(
+            L.circleMarker([fix.lat, fix.lon], {
+              radius: 4,
+              color: SEGMENT_COLOR,
+              weight: 1,
+              fillColor: "#ffffff",
+              fillOpacity: 1,
+            }),
+            byId.get(fix.id),
+          ).addTo(overlay);
         }
       }
 
@@ -116,7 +168,7 @@ export function MapView({
           if (fix.accuracy === null) continue;
           L.circle([fix.lat, fix.lon], {
             radius: fix.accuracy,
-            color: POINT_COLOR,
+            color: SEGMENT_COLOR,
             weight: 1,
             opacity: 0.25,
             fillOpacity: 0.08,
@@ -130,42 +182,53 @@ export function MapView({
       }
     }
 
-    if (settings.showAlarms) {
-      for (const fix of track.stats.alarms) {
-        L.circleMarker([fix.lat, fix.lon], {
-          radius: 9,
-          color: ALARM_COLOR,
-          weight: 3,
-          fillColor: ALARM_COLOR,
-          fillOpacity: 0.4,
-        })
-          .bindPopup(popupHtml(fix, settings))
-          .addTo(overlay);
-        bounds.extend([fix.lat, fix.lon]);
-      }
+    // Everything that is not a plain fix: screen events, unknown events and
+    // alarms. Each keeps its own colour so the map answers "what happened
+    // here" without a click.
+    for (const record of records) {
+      const kind = recordKind(record);
+      if (kind === "fix") continue;
+      if (kind === "alarm" && !settings.showAlarms) continue;
+      if (record.lat === null || record.lon === null) continue;
+
+      const color = KIND_COLORS[kind];
+      const isAlarm = kind === "alarm";
+      attach(
+        L.circleMarker([record.lat, record.lon], {
+          radius: isAlarm ? 9 : 6,
+          color,
+          weight: isAlarm ? 3 : 2,
+          fillColor: color,
+          fillOpacity: isAlarm ? 0.4 : 0.75,
+        }),
+        record,
+      ).addTo(overlay);
+      bounds.extend([record.lat, record.lon]);
     }
 
     if (first) {
-      L.circleMarker([first.lat, first.lon], {
-        radius: 7,
-        color: START_COLOR,
-        weight: 3,
-        fillColor: "#ffffff",
-        fillOpacity: 1,
-      })
-        .bindPopup(`<strong>Điểm đầu</strong>${popupHtml(first, settings)}`)
-        .addTo(overlay);
+      attach(
+        L.circleMarker([first.lat, first.lon], {
+          radius: 7,
+          color: START_COLOR,
+          weight: 3,
+          fillColor: "#ffffff",
+          fillOpacity: 1,
+        }),
+        byId.get(first.id),
+      ).addTo(overlay);
     }
     if (last && last !== first) {
-      L.circleMarker([last.lat, last.lon], {
-        radius: 7,
-        color: SEGMENT_COLOR,
-        weight: 3,
-        fillColor: SEGMENT_COLOR,
-        fillOpacity: 1,
-      })
-        .bindPopup(`<strong>Điểm cuối</strong>${popupHtml(last, settings)}`)
-        .addTo(overlay);
+      attach(
+        L.circleMarker([last.lat, last.lon], {
+          radius: 7,
+          color: SEGMENT_COLOR,
+          weight: 3,
+          fillColor: SEGMENT_COLOR,
+          fillOpacity: 1,
+        }),
+        byId.get(last.id),
+      ).addTo(overlay);
     }
 
     const key = `${track.stats.firstTimeMs}-${track.stats.lastTimeMs}-${track.stats.usedFixes}`;
@@ -173,7 +236,36 @@ export function MapView({
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
       fittedKeyRef.current = key;
     }
-  }, [track, settings, autoFit]);
+  }, [track, records, byId, settings, autoFit]);
+
+  // Selection lives in its own layer rather than restyling the dot underneath,
+  // so it survives a redraw without having to remember every base style.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    selectionRef.current?.remove();
+    selectionRef.current = null;
+
+    const record = selectedId === null ? undefined : byId.get(selectedId);
+    if (!record || record.lat === null || record.lon === null) return;
+
+    const latLng = L.latLng(record.lat, record.lon);
+    selectionRef.current = L.circleMarker(latLng, {
+      radius: 15,
+      color: KIND_COLORS[recordKind(record)],
+      weight: 3,
+      opacity: 0.9,
+      fill: false,
+      interactive: false,
+    }).addTo(map);
+
+    // Only chase a point that is off screen. Recentring on a dot the reader
+    // just clicked would yank the map for no reason.
+    if (!map.getBounds().pad(-0.15).contains(latLng)) {
+      map.panTo(latLng);
+    }
+  }, [selectedId, byId]);
 
   return <div className="map" ref={containerRef} />;
 }

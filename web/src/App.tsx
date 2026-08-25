@@ -5,7 +5,13 @@ import { DeniedScreen, LoadingScreen, SignInScreen } from "./auth/AuthScreens";
 import { useAccess } from "./auth/useAccess";
 import { auth } from "./firebase";
 import { MapView } from "./map/MapView";
-import type { PositionRecord } from "./map/records";
+import {
+  countByKind,
+  toFix,
+  visibleRecords,
+  type PositionRecord,
+  type RecordKind,
+} from "./map/records";
 import { deviceLabel, useDevices, usePositions } from "./map/usePositions";
 import { RecordDialog } from "./records/RecordDialog";
 import { Timeline } from "./records/Timeline";
@@ -15,6 +21,7 @@ import {
   formatDuration,
   formatSpeed,
   toIsoDate,
+  type Fix,
 } from "./map/track";
 import { SettingsPanel } from "./settings/SettingsPanel";
 import { useSettings } from "./settings/useSettings";
@@ -42,15 +49,43 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
   const [panel, setPanel] = useState<Panel>("none");
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [openRecord, setOpenRecord] = useState<PositionRecord | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Kinds the reader has switched off. Storing what is hidden rather than what
+  // is shown means a new kind arriving in the data appears by default instead
+  // of silently missing from a set built on an older day.
+  const [hidden, setHidden] = useState<ReadonlySet<RecordKind>>(new Set());
 
   const settingsState = useSettings();
   const { settings } = settingsState;
 
   const { devices, loading: devicesLoading, error: devicesError } = useDevices();
   const deviceId = selectedDevice ?? devices[0]?.id ?? null;
-  const { fixes, records, loading, error, live } = usePositions(deviceId, isoDate);
+  const { records, loading, error, live } = usePositions(deviceId, isoDate);
 
-  const track = useMemo(() => buildTrack(fixes, settings), [fixes, settings]);
+  const counts = useMemo(() => countByKind(records), [records]);
+  const visible = useMemo(() => visibleRecords(records, hidden), [records, hidden]);
+  // One filtered list feeds both views, so the map can never disagree with
+  // the timeline about what the day contained.
+  const visibleFixes = useMemo(
+    () => visible.map(toFix).filter((fix): fix is Fix => fix !== null),
+    [visible],
+  );
+  const track = useMemo(() => buildTrack(visibleFixes, settings), [visibleFixes, settings]);
+
+  const toggleKind = (kind: RecordKind) => {
+    setHidden((current) => {
+      const next = new Set(current);
+      if (!next.delete(kind)) next.add(kind);
+      return next;
+    });
+  };
+
+  // Choosing a record from the map should open the panel that shows it,
+  // otherwise the highlight has nowhere to land.
+  const selectRecord = (record: PositionRecord) => {
+    setSelectedId(record.id);
+    setPanel((current) => (current === "none" ? "timeline" : current));
+  };
 
   const shiftDay = (days: number) => {
     const [y, m, d] = isoDate.split("-").map(Number);
@@ -130,7 +165,17 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
 
       <div className="content">
         <main className="map-area">
-          <MapView track={track} settings={settings} autoFit />
+          <MapView
+            track={track}
+            records={visible}
+            settings={settings}
+            autoFit
+            selectedId={selectedId}
+            onSelect={(id) => {
+              const record = visible.find((r) => r.id === id);
+              if (record) selectRecord(record);
+            }}
+          />
 
           <div className="stats">
             {loading && <span>Đang tải…</span>}
@@ -168,7 +213,16 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
               <button onClick={() => setPanel("none")}>✕</button>
             </div>
             {panel === "timeline" && (
-              <Timeline records={records} loading={loading} onSelect={setOpenRecord} />
+              <Timeline
+                records={visible}
+                counts={counts}
+                hidden={hidden}
+                onToggleKind={toggleKind}
+                loading={loading}
+                selectedId={selectedId}
+                onSelect={(record) => setSelectedId(record.id)}
+                onOpenDetail={setOpenRecord}
+              />
             )}
             {panel === "settings" && (
               <SettingsPanel state={settingsState} isAdmin={isAdmin} />

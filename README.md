@@ -314,19 +314,38 @@ không đổi giữa hai chế độ.
 `tileUrl` cũng nằm trong remote config, nên đổi nhà cung cấp bản đồ chỉ là sửa
 một ô trong tab Quản trị.
 
-### Nhật ký
+### Nhật ký và bản đồ
 
-Tab **Nhật ký** liệt kê mọi bản ghi trong ngày theo chiều dọc, mới nhất trước:
-vị trí, sự kiện màn hình, nhịp giữ kết nối và SOS. Nút **Chi tiết** mở hộp
-thoại hiển thị đủ mọi trường có trong bản ghi đó.
+Tab **Nhật ký** liệt kê mọi bản ghi trong ngày theo chiều dọc, mới nhất trước.
+Nút **Chi tiết** mở hộp thoại hiển thị đủ mọi trường có trong bản ghi đó.
 
 Trường nào không có thì bỏ hẳn khỏi hộp thoại chứ không hiện dấu gạch. Mỗi bản
 ghi mang được gì phụ thuộc vào lúc đó máy trả lời được gì, nên một bảng cố định
 toàn ô trống sẽ nói được ít hơn chứ không nhiều hơn.
 
-Bộ lọc **Tất cả / Sự kiện / Vị trí** nằm ngay trên danh sách: một ngày bình
-thường có hàng trăm vị trí và vài sự kiện, không lọc thì thứ đáng tìm lại là
-thứ khó tìm nhất.
+**Mỗi loại một màu**, dùng chung cho chấm trên bản đồ và dòng trong nhật ký:
+
+| Loại | Màu |
+|---|---|
+| Vị trí | xanh dương `#2563eb` — trùng màu đường đi, để chấm không trông như một loại khác với đường nó nằm trên |
+| Bật màn hình | hổ phách `#f59e0b` |
+| Tắt màn hình | tím `#8b5cf6` |
+| Sự kiện khác | ngọc `#14b8a6` — tên sự kiện mà bản web này chưa biết |
+| Nhịp giữ kết nối | xám `#64748b` — không toạ độ nên chỉ có trong nhật ký |
+| SOS | đỏ `#dc2626` |
+
+Màu chọn ở tông giữa vì trang chạy trên cả nền sáng lẫn nền tối; tông chọn
+riêng cho một bên sẽ đục ở bên kia.
+
+**Bộ lọc là một, dùng cho cả hai.** Tắt một loại là nó biến mất khỏi cả danh
+sách lẫn bản đồ. Nếu lọc riêng từng bên thì màn hình sẽ có hai câu trả lời khác
+nhau cho cùng một câu hỏi. Chip chỉ hiện những loại ngày đó thật sự có — một
+hàng chip toàn số 0 là rác trên mọi ngày không có SOS, tức gần như mọi ngày.
+
+**Chọn ở đâu cũng sáng ở cả hai bên.** Bấm một dòng trong nhật ký thì chấm
+tương ứng trên bản đồ được khoanh vòng; bấm một chấm trên bản đồ thì nhật ký
+cuộn tới đúng dòng đó. Bản đồ chỉ tự dịch chuyển khi điểm đang nằm ngoài khung
+nhìn — kéo màn hình về một chấm mà người ta vừa bấm là giật vô cớ.
 
 Vì danh sách cần cả bản ghi không toạ độ, truy vấn đã bỏ điều kiện
 `heartbeat == false` và lọc trong bộ nhớ. Index `(heartbeat, time)` trong

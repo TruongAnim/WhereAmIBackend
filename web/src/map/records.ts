@@ -47,7 +47,20 @@ export interface PositionRecord {
   mock: boolean;
 }
 
-export type RecordKind = "alarm" | "event" | "heartbeat" | "fix";
+/**
+ * Screen events get a kind each rather than sharing one.
+ *
+ * They are the two the reader is most likely to be looking for, and the whole
+ * point of colouring the map is telling them apart at a glance. "event" is
+ * the bucket for a name a future SDK sends that this viewer does not know.
+ */
+export type RecordKind =
+  | "fix"
+  | "screen_on"
+  | "screen_off"
+  | "event"
+  | "heartbeat"
+  | "alarm";
 
 /**
  * An SOS outranks everything: it is the one record a person pressed a button
@@ -55,21 +68,56 @@ export type RecordKind = "alarm" | "event" | "heartbeat" | "fix";
  */
 export function recordKind(record: PositionRecord): RecordKind {
   if (record.alarm !== null) return "alarm";
+  if (record.event === "screen_on") return "screen_on";
+  if (record.event === "screen_off") return "screen_off";
   if (record.event !== null) return "event";
   if (record.heartbeat) return "heartbeat";
   return "fix";
 }
 
-const EVENT_LABELS: Record<string, string> = {
+/** Filter chips and the map legend read in this order. */
+export const KIND_ORDER: readonly RecordKind[] = [
+  "fix",
+  "screen_on",
+  "screen_off",
+  "event",
+  "heartbeat",
+  "alarm",
+];
+
+export const KIND_LABELS: Record<RecordKind, string> = {
+  fix: "Vị trí",
   screen_on: "Bật màn hình",
   screen_off: "Tắt màn hình",
+  event: "Sự kiện khác",
+  heartbeat: "Nhịp giữ kết nối",
+  alarm: "SOS",
+};
+
+/**
+ * One colour per kind, shared by the map dots and the timeline rows.
+ *
+ * Mid-tone on purpose: these sit on a white page and on a dark one, and a
+ * shade picked to look right on either alone goes muddy on the other. The fix
+ * colour matches the track line so a point never looks like a different kind
+ * of thing from the line it sits on.
+ */
+export const KIND_COLORS: Record<RecordKind, string> = {
+  fix: "#2563eb",
+  screen_on: "#f59e0b",
+  screen_off: "#8b5cf6",
+  event: "#14b8a6",
+  heartbeat: "#64748b",
+  alarm: "#dc2626",
 };
 
 export function recordTitle(record: PositionRecord): string {
   if (record.alarm !== null) return record.alarm.toUpperCase();
-  if (record.event !== null) return EVENT_LABELS[record.event] ?? record.event;
-  if (record.heartbeat) return "Nhịp giữ kết nối";
-  return "Vị trí";
+  const kind = recordKind(record);
+  // An unknown event is worth showing under its raw name; the generic label
+  // would hide the one piece of information it carries.
+  if (kind === "event") return record.event ?? KIND_LABELS.event;
+  return KIND_LABELS[kind];
 }
 
 /** The one line under the title in the list. Empty when there is nothing to add. */
@@ -143,6 +191,31 @@ export function toFix(record: PositionRecord): Fix | null {
  */
 export function sortNewestFirst(records: readonly PositionRecord[]): PositionRecord[] {
   return [...records].sort((a, b) => b.timeMs - a.timeMs);
+}
+
+/** How many of each kind are in a day, for the filter chips. */
+export function countByKind(
+  records: readonly PositionRecord[],
+): Record<RecordKind, number> {
+  const counts = {
+    fix: 0,
+    screen_on: 0,
+    screen_off: 0,
+    event: 0,
+    heartbeat: 0,
+    alarm: 0,
+  };
+  for (const record of records) counts[recordKind(record)]++;
+  return counts;
+}
+
+/** Records whose kind is not hidden. Drives the timeline and the map alike. */
+export function visibleRecords(
+  records: readonly PositionRecord[],
+  hidden: ReadonlySet<RecordKind>,
+): PositionRecord[] {
+  if (hidden.size === 0) return [...records];
+  return records.filter((record) => !hidden.has(recordKind(record)));
 }
 
 export function formatClock(timeMs: number): string {

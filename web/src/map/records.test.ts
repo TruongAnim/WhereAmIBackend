@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  countByKind,
   recordKind,
   recordSummary,
   recordTitle,
   sortNewestFirst,
   toFix,
+  visibleRecords,
   type PositionRecord,
 } from "./records";
 
@@ -41,9 +43,19 @@ function record(overrides: Partial<PositionRecord> = {}): PositionRecord {
 
 test("classifies each kind of record", () => {
   assert.equal(recordKind(record({ lat: 10, lon: 106 })), "fix");
-  assert.equal(recordKind(record({ event: "screen_on", heartbeat: true })), "event");
   assert.equal(recordKind(record({ heartbeat: true })), "heartbeat");
   assert.equal(recordKind(record({ lat: 10, lon: 106, alarm: "sos" })), "alarm");
+});
+
+test("gives each screen event its own kind so the map can colour them apart", () => {
+  assert.equal(recordKind(record({ event: "screen_on" })), "screen_on");
+  assert.equal(recordKind(record({ event: "screen_off" })), "screen_off");
+});
+
+test("buckets an event name it does not know", () => {
+  // A future SDK may send something this viewer predates. It must still be
+  // listed and drawn rather than disappearing into the fix bucket.
+  assert.equal(recordKind(record({ event: "boot" })), "event");
 });
 
 test("puts an SOS ahead of the event it arrived with", () => {
@@ -110,4 +122,34 @@ test("leaves the input array untouched", () => {
   const input = [record({ id: "a", timeMs: 1 }), record({ id: "b", timeMs: 2 })];
   sortNewestFirst(input);
   assert.deepEqual(input.map((r) => r.id), ["a", "b"]);
+});
+
+test("counts every kind, including the ones a day has none of", () => {
+  const counts = countByKind([
+    record({ id: "a", lat: 10, lon: 106 }),
+    record({ id: "b", lat: 10, lon: 106 }),
+    record({ id: "c", event: "screen_on" }),
+    record({ id: "d", heartbeat: true }),
+  ]);
+  assert.equal(counts.fix, 2);
+  assert.equal(counts.screen_on, 1);
+  assert.equal(counts.heartbeat, 1);
+  // Present as a zero rather than missing, so the caller can decide whether
+  // to show a chip without checking for undefined.
+  assert.equal(counts.alarm, 0);
+});
+
+test("hiding a kind removes it from the one list both views read", () => {
+  const all = [
+    record({ id: "a", lat: 10, lon: 106 }),
+    record({ id: "b", event: "screen_on" }),
+    record({ id: "c", event: "screen_off" }),
+  ];
+  const shown = visibleRecords(all, new Set(["screen_off"]));
+  assert.deepEqual(shown.map((r) => r.id), ["a", "b"]);
+});
+
+test("hides nothing when nothing is switched off", () => {
+  const all = [record({ id: "a" }), record({ id: "b" })];
+  assert.equal(visibleRecords(all, new Set()).length, 2);
 });
