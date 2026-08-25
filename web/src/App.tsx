@@ -5,7 +5,10 @@ import { DeniedScreen, LoadingScreen, SignInScreen } from "./auth/AuthScreens";
 import { useAccess } from "./auth/useAccess";
 import { auth } from "./firebase";
 import { MapView } from "./map/MapView";
-import { useDevices, usePositions } from "./map/usePositions";
+import type { PositionRecord } from "./map/records";
+import { deviceLabel, useDevices, usePositions } from "./map/usePositions";
+import { RecordDialog } from "./records/RecordDialog";
+import { Timeline } from "./records/Timeline";
 import {
   buildTrack,
   formatDistance,
@@ -16,7 +19,13 @@ import {
 import { SettingsPanel } from "./settings/SettingsPanel";
 import { useSettings } from "./settings/useSettings";
 
-type Panel = "none" | "settings" | "admin";
+type Panel = "none" | "timeline" | "settings" | "admin";
+
+const PANEL_TITLES: Record<Exclude<Panel, "none">, string> = {
+  timeline: "Nhật ký",
+  settings: "Tuỳ chỉnh hiển thị",
+  admin: "Quản trị",
+};
 
 export default function App() {
   const access = useAccess();
@@ -32,13 +41,14 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
   const [isoDate, setIsoDate] = useState(today);
   const [panel, setPanel] = useState<Panel>("none");
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [openRecord, setOpenRecord] = useState<PositionRecord | null>(null);
 
   const settingsState = useSettings();
   const { settings } = settingsState;
 
   const { devices, loading: devicesLoading, error: devicesError } = useDevices();
   const deviceId = selectedDevice ?? devices[0]?.id ?? null;
-  const { fixes, loading, error, live } = usePositions(deviceId, isoDate);
+  const { fixes, records, loading, error, live } = usePositions(deviceId, isoDate);
 
   const track = useMemo(() => buildTrack(fixes, settings), [fixes, settings]);
 
@@ -67,8 +77,7 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
             {devices.length === 0 && <option value="">Chưa có thiết bị</option>}
             {devices.map((device) => (
               <option key={device.id} value={device.id}>
-                {device.id}
-                {device.battery !== null ? ` · ${device.battery}%` : ""}
+                {deviceLabel(device)}
               </option>
             ))}
           </select>
@@ -93,6 +102,12 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
         </div>
 
         <div className="toolbar-group">
+          <button
+            className={panel === "timeline" ? "active" : ""}
+            onClick={() => setPanel(panel === "timeline" ? "none" : "timeline")}
+          >
+            Nhật ký
+          </button>
           <button
             className={panel === "settings" ? "active" : ""}
             onClick={() => setPanel(panel === "settings" ? "none" : "settings")}
@@ -149,17 +164,27 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
         {panel !== "none" && (
           <aside className="panel">
             <div className="panel-header">
-              <h2>{panel === "settings" ? "Tuỳ chỉnh hiển thị" : "Quản trị"}</h2>
+              <h2>{PANEL_TITLES[panel]}</h2>
               <button onClick={() => setPanel("none")}>✕</button>
             </div>
-            {panel === "settings" ? (
-              <SettingsPanel state={settingsState} isAdmin={isAdmin} />
-            ) : (
-              <AdminPanel currentEmail={email.toLowerCase()} />
+            {panel === "timeline" && (
+              <Timeline records={records} loading={loading} onSelect={setOpenRecord} />
             )}
+            {panel === "settings" && (
+              <SettingsPanel state={settingsState} isAdmin={isAdmin} />
+            )}
+            {panel === "admin" && <AdminPanel currentEmail={email.toLowerCase()} />}
           </aside>
         )}
       </div>
+
+      {openRecord !== null && (
+        <RecordDialog
+          record={openRecord}
+          settings={settings}
+          onClose={() => setOpenRecord(null)}
+        />
+      )}
     </div>
   );
 }

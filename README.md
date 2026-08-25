@@ -296,6 +296,24 @@ không đổi giữa hai chế độ.
 `tileUrl` cũng nằm trong remote config, nên đổi nhà cung cấp bản đồ chỉ là sửa
 một ô trong tab Quản trị.
 
+### Nhật ký
+
+Tab **Nhật ký** liệt kê mọi bản ghi trong ngày theo chiều dọc, mới nhất trước:
+vị trí, sự kiện màn hình, nhịp giữ kết nối và SOS. Nút **Chi tiết** mở hộp
+thoại hiển thị đủ mọi trường có trong bản ghi đó.
+
+Trường nào không có thì bỏ hẳn khỏi hộp thoại chứ không hiện dấu gạch. Mỗi bản
+ghi mang được gì phụ thuộc vào lúc đó máy trả lời được gì, nên một bảng cố định
+toàn ô trống sẽ nói được ít hơn chứ không nhiều hơn.
+
+Bộ lọc **Tất cả / Sự kiện / Vị trí** nằm ngay trên danh sách: một ngày bình
+thường có hàng trăm vị trí và vài sự kiện, không lọc thì thứ đáng tìm lại là
+thứ khó tìm nhất.
+
+Vì danh sách cần cả bản ghi không toạ độ, truy vấn đã bỏ điều kiện
+`heartbeat == false` và lọc trong bộ nhớ. Index `(heartbeat, time)` trong
+`firestore.indexes.json` hiện không còn truy vấn nào dùng.
+
 ### Phát triển tại chỗ
 
 ```bash

@@ -11,5 +11,11 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/map/track.ts", "src/map/track.test.ts", "src/settings/settings.ts"]
+  "include": [
+    "src/map/track.ts",
+    "src/map/track.test.ts",
+    "src/map/records.ts",
+    "src/map/records.test.ts",
+    "src/settings/settings.ts"
+  ]
 }

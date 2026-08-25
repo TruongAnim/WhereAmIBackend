@@ -384,3 +384,261 @@ table.popup th {
     gap: 10px;
   }
 }
+
+/* ---------- icons ---------- */
+
+.icon {
+  display: block;
+  flex: none;
+}
+
+/* ---------- timeline ---------- */
+
+.timeline-filters {
+  position: sticky;
+  top: 45px;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.timeline-empty {
+  padding: 18px 14px;
+  margin: 0;
+}
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.timeline-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* The kind is the one thing worth reading at a glance in a list this long,
+   so it is carried by colour rather than by another line of text. */
+.timeline-icon.kind-event {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.timeline-icon.kind-alarm {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.timeline-icon.kind-fix {
+  color: var(--text);
+}
+
+.timeline-text {
+  min-width: 0;
+}
+
+.timeline-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.timeline-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.timeline-title {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-summary {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-detail {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ---------- record dialog ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(6, 8, 12, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.modal-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.modal-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.modal-header .timeline-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: 6px 18px 18px;
+}
+
+.detail-section {
+  margin-top: 16px;
+}
+
+.detail-section h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.detail-rows {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: auto 130px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.detail-row:nth-child(odd) {
+  background: var(--bg);
+}
+
+.detail-icon {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.detail-row dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.detail-row dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.detail-row.highlight .detail-icon,
+.detail-row.highlight dd {
+  color: var(--danger);
+}
+
+.detail-note {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .detail-row {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "icon label" "icon value";
+    row-gap: 2px;
+  }
+
+  .detail-icon {
+    grid-area: icon;
+    align-self: start;
+    padding-top: 2px;
+  }
+
+  .detail-row dt {
+    grid-area: label;
+  }
+
+  .detail-row dd {
+    grid-area: value;
+  }
+}
