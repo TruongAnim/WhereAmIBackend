@@ -81,9 +81,9 @@ export function SettingsPanel({
     setSaved(null);
     try {
       await saveRemoteDefaults(settings);
-      setSaved("Đã lưu làm mặc định cho mọi người.");
+      setSaved("Saved as the default for everyone.");
     } catch {
-      setSaved("Lưu thất bại — cần quyền admin.");
+      setSaved("Save failed — admin rights required.");
     } finally {
       setSaving(false);
     }
@@ -92,32 +92,33 @@ export function SettingsPanel({
   return (
     <div className="panel-body">
       <section>
-        <h3>Đường đi</h3>
+        <h3>Track</h3>
         <label className="field">
-          <span className="field-label">Khi có khoảng trống</span>
+          <span className="field-label">When there is a gap</span>
           <select
             value={settings.gapBehavior}
             onChange={(e) => set("gapBehavior")(e.target.value as MapSettings["gapBehavior"])}
           >
-            <option value="split">Ngắt đoạn</option>
-            <option value="connect">Nối thẳng</option>
+            <option value="split">Break the line</option>
+            <option value="connect">Join straight through</option>
           </select>
           <span className="field-hint">
-            Máy đứng yên lâu thì SDK tắt GPS. Ngắt đoạn phản ánh đúng dữ liệu có
-            thật; nối thẳng cho đường liền mạch nhưng là suy đoán.
+            The SDK turns GPS off once the phone stops moving. Breaking the line
+            reflects the data that actually exists; joining through looks
+            continuous but is a guess.
           </span>
         </label>
         <NumberField
-          label="Ngưỡng thời gian (phút)"
-          hint="Cách nhau lâu hơn ngần này thì coi là một khoảng trống. 0 để tắt."
+          label="Time threshold (min)"
+          hint="A pause longer than this counts as a gap. 0 disables it."
           value={settings.gapMinutes}
           min={0}
           max={1440}
           onChange={set("gapMinutes")}
         />
         <NumberField
-          label="Ngưỡng khoảng cách (m)"
-          hint="Nhảy xa hơn ngần này cũng coi là khoảng trống, dù thời gian ngắn. 0 để tắt."
+          label="Distance threshold (m)"
+          hint="A jump further than this counts as a gap too, however short the pause. 0 disables it."
           value={settings.gapDistanceMeters}
           min={0}
           max={100000}
@@ -125,8 +126,8 @@ export function SettingsPanel({
           onChange={set("gapDistanceMeters")}
         />
         <NumberField
-          label="Đơn giản hoá (m)"
-          hint="Bỏ bớt điểm gần thẳng hàng khi đường quá dày. 0 để tắt."
+          label="Simplify (m)"
+          hint="Drops nearly-collinear points when the line gets dense. 0 disables it."
           value={settings.simplifyMeters}
           min={0}
           max={1000}
@@ -136,10 +137,10 @@ export function SettingsPanel({
       </section>
 
       <section>
-        <h3>Lọc dữ liệu</h3>
+        <h3>Filtering</h3>
         <NumberField
-          label="Sai số tối đa (m)"
-          hint="Bỏ điểm có sai số lớn hơn. Điểm SOS luôn được giữ. 0 để tắt."
+          label="Maximum accuracy (m)"
+          hint="Drops points less certain than this. An SOS is always kept. 0 disables it."
           value={settings.maxAccuracyMeters}
           min={0}
           max={10000}
@@ -149,16 +150,16 @@ export function SettingsPanel({
       </section>
 
       <section>
-        <h3>Hiển thị</h3>
-        <ToggleField label="Hiện từng điểm" value={settings.showPoints} onChange={set("showPoints")} />
+        <h3>Display</h3>
+        <ToggleField label="Show every point" value={settings.showPoints} onChange={set("showPoints")} />
         <ToggleField
-          label="Hiện vòng tròn sai số"
+          label="Show accuracy circles"
           value={settings.showAccuracyCircles}
           onChange={set("showAccuracyCircles")}
         />
-        <ToggleField label="Đánh dấu SOS" value={settings.showAlarms} onChange={set("showAlarms")} />
+        <ToggleField label="Mark SOS records" value={settings.showAlarms} onChange={set("showAlarms")} />
         <label className="field">
-          <span className="field-label">Đơn vị tốc độ</span>
+          <span className="field-label">Speed unit</span>
           <select
             value={settings.speedUnit}
             onChange={(e) => set("speedUnit")(e.target.value as MapSettings["speedUnit"])}
@@ -171,7 +172,7 @@ export function SettingsPanel({
 
       {isAdmin && (
         <section>
-          <h3>Nguồn bản đồ</h3>
+          <h3>Map tiles</h3>
           <label className="field">
             <span className="field-label">Tile URL</span>
             <input
@@ -180,7 +181,7 @@ export function SettingsPanel({
               onChange={(e) => set("tileUrl")(e.target.value)}
             />
             <span className="field-hint">
-              Đổi được mà không cần deploy lại, phòng khi nguồn tile hiện tại bị chặn.
+              Changeable without a redeploy, in case the current tile source is blocked.
             </span>
           </label>
           <label className="field">
@@ -191,7 +192,7 @@ export function SettingsPanel({
               onChange={(e) => set("tileAttribution")(e.target.value)}
             />
             <span className="field-hint">
-              OpenStreetMap yêu cầu ghi nguồn — đừng bỏ trống.
+              OpenStreetMap requires attribution — do not leave this empty.
             </span>
           </label>
         </section>
@@ -199,17 +200,17 @@ export function SettingsPanel({
 
       <section className="panel-actions">
         <button onClick={resetOverrides} disabled={overrideCount === 0}>
-          Khôi phục mặc định{overrideCount > 0 ? ` (${overrideCount})` : ""}
+          Reset to defaults{overrideCount > 0 ? ` (${overrideCount})` : ""}
         </button>
         {isAdmin && (
           <button className="primary" onClick={publishDefaults} disabled={saving}>
-            {saving ? "Đang lưu…" : "Đặt làm mặc định chung"}
+            {saving ? "Saving…" : "Set as the shared default"}
           </button>
         )}
         {saved && <p className="muted">{saved}</p>}
         {overrideCount > 0 && (
           <p className="field-hint">
-            Bạn đang dùng {overrideCount} tuỳ chỉnh riêng, chỉ lưu trên trình duyệt này.
+            {overrideCount} of these are your own overrides, kept in this browser only.
           </p>
         )}
       </section>

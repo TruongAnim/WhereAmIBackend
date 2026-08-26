@@ -8,7 +8,7 @@ export function LoadingScreen() {
     <div className="centered">
       <div className="card">
         <div className="spinner" aria-hidden="true" />
-        <p className="muted">Đang kiểm tra quyền truy cập…</p>
+        <p className="muted">Checking your access…</p>
       </div>
     </div>
   );
@@ -27,10 +27,10 @@ export function SignInScreen() {
       const code = (cause as { code?: string }).code ?? "";
       setError(
         code === "auth/popup-closed-by-user"
-          ? "Bạn đã đóng cửa sổ đăng nhập."
+          ? "You closed the sign-in window."
           : code === "auth/unauthorized-domain"
-            ? "Tên miền này chưa được cho phép trong Firebase Auth."
-            : "Đăng nhập thất bại. Thử lại nhé.",
+            ? "This domain is not on the Firebase Auth allow-list."
+            : "Sign-in failed. Try again.",
       );
     } finally {
       setBusy(false);
@@ -41,9 +41,9 @@ export function SignInScreen() {
     <div className="centered">
       <div className="card">
         <h1>WhereAmI</h1>
-        <p className="muted">Xem lại lộ trình đã ghi trên bản đồ.</p>
+        <p className="muted">Replay the track you recorded, on a map.</p>
         <button className="primary" onClick={signIn} disabled={busy}>
-          {busy ? "Đang mở…" : "Đăng nhập bằng Google"}
+          {busy ? "Opening…" : "Sign in with Google"}
         </button>
         {error && <p className="error">{error}</p>}
       </div>
@@ -56,17 +56,17 @@ export function DeniedScreen({ access }: { access: AccessState }) {
   return (
     <div className="centered">
       <div className="card">
-        <h1>Chưa có quyền xem</h1>
+        <h1>No access yet</h1>
         <p>
-          Tài khoản <strong>{email}</strong> đã đăng nhập thành công nhưng chưa
-          được cấp quyền xem dữ liệu.
+          <strong>{email}</strong> signed in successfully but has not been
+          granted access to the data.
         </p>
         <p className="muted">
-          Hãy liên hệ quản trị viên tại <strong>{CONTACT_HINT}</strong> và gửi kèm
-          địa chỉ e-mail ở trên để được thêm vào danh sách.
+          Ask the administrator at <strong>{CONTACT_HINT}</strong> to add the
+          address above to the list.
         </p>
         {access.error && <p className="error">{access.error}</p>}
-        <button onClick={() => signOut(auth)}>Đăng xuất</button>
+        <button onClick={() => signOut(auth)}>Sign out</button>
       </div>
     </div>
   );

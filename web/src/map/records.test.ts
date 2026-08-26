@@ -66,11 +66,11 @@ test("puts an SOS ahead of the event it arrived with", () => {
   assert.equal(recordKind(sos), "alarm");
 });
 
-test("names screen events in the reader's language", () => {
-  assert.equal(recordTitle(record({ event: "screen_on", heartbeat: true })), "Bật màn hình");
-  assert.equal(recordTitle(record({ event: "screen_off", heartbeat: true })), "Tắt màn hình");
-  assert.equal(recordTitle(record({ heartbeat: true })), "Nhịp giữ kết nối");
-  assert.equal(recordTitle(record({ lat: 1, lon: 2 })), "Vị trí");
+test("gives every kind a readable name", () => {
+  assert.equal(recordTitle(record({ event: "screen_on", heartbeat: true })), "Screen on");
+  assert.equal(recordTitle(record({ event: "screen_off", heartbeat: true })), "Screen off");
+  assert.equal(recordTitle(record({ heartbeat: true })), "Keep-alive");
+  assert.equal(recordTitle(record({ lat: 1, lon: 2 })), "Position");
 });
 
 test("falls back to the raw name for an event it does not know", () => {

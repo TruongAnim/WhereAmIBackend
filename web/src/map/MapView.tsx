@@ -4,6 +4,7 @@ import type { MapSettings } from "../settings/settings";
 import {
   KIND_COLORS,
   formatAge,
+  formatDateTime,
   recordKind,
   recordTitle,
   type PositionRecord,
@@ -24,21 +25,21 @@ function escapeHtml(value: string): string {
 function popupHtml(record: PositionRecord, settings: MapSettings): string {
   const kind = recordKind(record);
   const rows: Array<[string, string]> = [
-    ["Thời gian", new Date(record.timeMs).toLocaleString()],
+    ["Time", formatDateTime(record.timeMs)],
   ];
   if (record.speed !== null) {
-    rows.push(["Tốc độ", formatSpeed(record.speed, settings.speedUnit)]);
+    rows.push(["Speed", formatSpeed(record.speed, settings.speedUnit)]);
   }
-  if (record.accuracy !== null) rows.push(["Sai số", `${Math.round(record.accuracy)} m`]);
-  if (record.bearing !== null) rows.push(["Hướng", `${Math.round(record.bearing)}°`]);
+  if (record.accuracy !== null) rows.push(["Accuracy", `${Math.round(record.accuracy)} m`]);
+  if (record.bearing !== null) rows.push(["Bearing", `${Math.round(record.bearing)}°`]);
   if (record.battery !== null) {
-    rows.push(["Pin", `${record.battery}%${record.charging ? " (đang sạc)" : ""}`]);
+    rows.push(["Battery", `${record.battery}%${record.charging ? " (charging)" : ""}`]);
   }
   if (record.lat !== null && record.lon !== null) {
-    rows.push(["Toạ độ", `${record.lat.toFixed(6)}, ${record.lon.toFixed(6)}`]);
+    rows.push(["Coordinates", `${record.lat.toFixed(6)}, ${record.lon.toFixed(6)}`]);
   }
   // The one caption that keeps a borrowed position from reading as a fresh one.
-  if (record.positionAge !== null) rows.push(["Vị trí", formatAge(record.positionAge)]);
+  if (record.positionAge !== null) rows.push(["Position", formatAge(record.positionAge)]);
 
   const body = rows
     .map(([label, value]) => `<tr><th>${label}</th><td>${escapeHtml(value)}</td></tr>`)

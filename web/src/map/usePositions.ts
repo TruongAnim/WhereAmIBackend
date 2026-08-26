@@ -131,12 +131,12 @@ export function usePositions(deviceId: string | null, isoDate: string): Position
     const describe = (cause: unknown): string => {
       const code = (cause as { code?: string }).code ?? "";
       if (code === "failed-precondition") {
-        return "Firestore còn thiếu index cho truy vấn này. Chạy: firebase deploy --only firestore:indexes";
+        return "Firestore is missing an index for this query. Run: firebase deploy --only firestore:indexes";
       }
       if (code === "permission-denied") {
-        return "Không có quyền đọc dữ liệu của thiết bị này.";
+        return "You do not have permission to read this device.";
       }
-      return "Không tải được dữ liệu. Thử lại nhé.";
+      return "Could not load the data. Try again.";
     };
 
     if (!isToday) {
@@ -235,7 +235,7 @@ export function useDevices(): { devices: DeviceSummary[]; loading: boolean; erro
       () => {
         setDevices([]);
         setLoading(false);
-        setError("Không đọc được danh sách thiết bị.");
+        setError("Could not load the device list.");
       },
     );
     return unsubscribe;

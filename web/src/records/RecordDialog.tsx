@@ -72,18 +72,18 @@ export function RecordDialog({
             <h2>{recordTitle(record)}</h2>
             <p className="muted">{formatDateTime(record.timeMs)}</p>
           </div>
-          <button ref={closeRef} onClick={onClose} aria-label="Đóng">
+          <button ref={closeRef} onClick={onClose} aria-label="Close">
             ✕
           </button>
         </header>
 
         <div className="modal-body">
-          <Section title="Thời gian">
-            <Row icon="clock" label="Ghi trên máy" value={formatDateTime(record.timeMs)} />
+          <Section title="Time">
+            <Row icon="clock" label="Recorded on device" value={formatDateTime(record.timeMs)} />
             {record.receivedAtMs !== null && (
               <Row
                 icon="download"
-                label="Máy chủ nhận"
+                label="Received by server"
                 value={formatDateTime(record.receivedAtMs)}
                 note={delayMs !== null ? formatDelay(delayMs) : undefined}
               />
@@ -91,96 +91,96 @@ export function RecordDialog({
           </Section>
 
           {hasPosition && (
-            <Section title="Vị trí">
+            <Section title="Position">
               <Row
                 icon="pin"
-                label="Toạ độ"
+                label="Coordinates"
                 value={`${record.lat!.toFixed(6)}, ${record.lon!.toFixed(6)}`}
                 // Attached to the coordinates rather than given a row of its
                 // own, so the number cannot be read without its caveat.
                 note={record.positionAge !== null ? formatAge(record.positionAge) : undefined}
               />
               {record.accuracy !== null && (
-                <Row icon="target" label="Sai số" value={`${Math.round(record.accuracy)} m`} />
+                <Row icon="target" label="Accuracy" value={`${Math.round(record.accuracy)} m`} />
               )}
               {record.altitude !== null && (
-                <Row icon="mountain" label="Độ cao" value={`${Math.round(record.altitude)} m`} />
+                <Row icon="mountain" label="Altitude" value={`${Math.round(record.altitude)} m`} />
               )}
               {record.speed !== null && (
                 <Row
                   icon="gauge"
-                  label="Tốc độ"
+                  label="Speed"
                   value={formatSpeed(record.speed, settings.speedUnit)}
                 />
               )}
               {record.bearing !== null && (
-                <Row icon="compass" label="Hướng" value={`${Math.round(record.bearing)}°`} />
+                <Row icon="compass" label="Bearing" value={`${Math.round(record.bearing)}°`} />
               )}
               {record.provider !== null && (
-                <Row icon="radio" label="Nguồn vị trí" value={record.provider} />
+                <Row icon="radio" label="Provider" value={record.provider} />
               )}
               {record.satellites !== null && (
-                <Row icon="satellite" label="Vệ tinh" value={String(record.satellites)} />
+                <Row icon="satellite" label="Satellites" value={String(record.satellites)} />
               )}
               {record.mock && (
-                <Row icon="flask" label="Vị trí giả lập" value="Có" highlight />
+                <Row icon="flask" label="Mock location" value="Yes" highlight />
               )}
             </Section>
           )}
 
-          <Section title="Thiết bị">
+          <Section title="Device">
             {record.battery !== null && (
               <Row
                 icon={record.charging ? "batteryCharging" : "battery"}
-                label="Pin"
+                label="Battery"
                 value={`${record.battery}%`}
-                note={record.charging ? "đang sạc" : undefined}
+                note={record.charging ? "charging" : undefined}
               />
             )}
             {record.batteryTemperature !== null && (
               <Row
                 icon="thermometer"
-                label="Nhiệt độ pin"
+                label="Battery temperature"
                 value={`${record.batteryTemperature.toFixed(1)} °C`}
               />
             )}
             {record.screenOn !== null && (
               <Row
                 icon={record.screenOn ? "sun" : "moon"}
-                label="Màn hình"
-                value={record.screenOn ? "Đang bật" : "Đang tắt"}
+                label="Screen"
+                value={record.screenOn ? "On" : "Off"}
               />
             )}
             {record.network !== null && (
               <Row
                 icon={networkIcon(record.network)}
-                label="Kết nối"
+                label="Network"
                 value={networkLabel(record.network)}
               />
             )}
             {record.carrier !== null && (
-              <Row icon="tower" label="Nhà mạng" value={record.carrier} />
+              <Row icon="tower" label="Carrier" value={record.carrier} />
             )}
             {record.activity !== null && (
               <Row
                 icon="walk"
-                label="Hoạt động"
+                label="Activity"
                 value={activityLabel(record.activity)}
                 note={
                   record.activityConfidence !== null
-                    ? `${record.activityConfidence}% chắc chắn`
+                    ? `${record.activityConfidence}% confidence`
                     : undefined
                 }
               />
             )}
             {record.alarm !== null && (
-              <Row icon="alert" label="Cảnh báo" value={record.alarm.toUpperCase()} highlight />
+              <Row icon="alert" label="Alarm" value={record.alarm.toUpperCase()} highlight />
             )}
           </Section>
 
-          <Section title="Bản ghi">
-            <Row icon="hash" label="Mã" value={record.id} mono />
-            <Row icon="phone" label="Loại" value={KIND_LABELS[kind]} />
+          <Section title="Record">
+            <Row icon="hash" label="Id" value={record.id} mono />
+            <Row icon="phone" label="Kind" value={KIND_LABELS[kind]} />
           </Section>
         </div>
       </div>
@@ -190,12 +190,12 @@ export function RecordDialog({
 
 function formatDelay(millis: number): string {
   // Only reachable when the phone's clock ran ahead of the server's.
-  if (millis < 0) return "trước giờ máy";
+  if (millis < 0) return "ahead of device clock";
   const seconds = Math.round(millis / 1000);
-  if (seconds < 60) return `trễ ${seconds}s`;
+  if (seconds < 60) return `${seconds}s later`;
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `trễ ${minutes} phút`;
-  return `trễ ${Math.round(minutes / 60)} giờ`;
+  if (minutes < 60) return `${minutes} min later`;
+  return `${Math.round(minutes / 60)}h later`;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

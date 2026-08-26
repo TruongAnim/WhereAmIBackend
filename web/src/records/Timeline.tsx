@@ -64,7 +64,7 @@ export function Timeline({
             className={`chip${hidden.has(kind) ? " off" : ""}`}
             style={{ "--chip-color": KIND_COLORS[kind] } as React.CSSProperties}
             onClick={() => onToggleKind(kind)}
-            title={hidden.has(kind) ? "Hiện lại" : "Ẩn khỏi danh sách và bản đồ"}
+            title={hidden.has(kind) ? "Show again" : "Hide from the list and the map"}
           >
             <span className="chip-dot" />
             {KIND_LABELS[kind]} {counts[kind]}
@@ -72,9 +72,9 @@ export function Timeline({
         ))}
       </div>
 
-      {loading && <p className="muted timeline-empty">Đang tải…</p>}
+      {loading && <p className="muted timeline-empty">Loading…</p>}
       {!loading && shown.length === 0 && (
-        <p className="muted timeline-empty">Không có bản ghi nào.</p>
+        <p className="muted timeline-empty">Nothing recorded.</p>
       )}
 
       <ul className="timeline-list" ref={listRef}>
@@ -108,9 +108,9 @@ export function Timeline({
               <button
                 className="timeline-detail"
                 onClick={() => onOpenDetail(record)}
-                title="Xem chi tiết"
+                title="Show details"
               >
-                Chi tiết
+                Details
               </button>
             </li>
           );

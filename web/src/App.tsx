@@ -29,9 +29,9 @@ import { useSettings } from "./settings/useSettings";
 type Panel = "none" | "timeline" | "settings" | "admin";
 
 const PANEL_TITLES: Record<Exclude<Panel, "none">, string> = {
-  timeline: "Nhật ký",
-  settings: "Tuỳ chỉnh hiển thị",
-  admin: "Quản trị",
+  timeline: "Log",
+  settings: "Display settings",
+  admin: "Admin",
 };
 
 export default function App() {
@@ -100,7 +100,7 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
       <header className="toolbar">
         <div className="toolbar-group">
           <strong className="brand">WhereAmI</strong>
-          {live && <span className="live">● trực tiếp</span>}
+          {live && <span className="live">● live</span>}
         </div>
 
         <div className="toolbar-group">
@@ -109,7 +109,7 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
             onChange={(e) => setSelectedDevice(e.target.value)}
             disabled={devices.length === 0}
           >
-            {devices.length === 0 && <option value="">Chưa có thiết bị</option>}
+            {devices.length === 0 && <option value="">No devices yet</option>}
             {devices.map((device) => (
               <option key={device.id} value={device.id}>
                 {deviceLabel(device)}
@@ -118,7 +118,7 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
           </select>
 
           <div className="date-picker">
-            <button onClick={() => shiftDay(-1)} title="Ngày trước">
+            <button onClick={() => shiftDay(-1)} title="Previous day">
               ‹
             </button>
             <input
@@ -127,11 +127,11 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
               max={today}
               onChange={(e) => e.target.value && setIsoDate(e.target.value)}
             />
-            <button onClick={() => shiftDay(1)} disabled={isoDate >= today} title="Ngày sau">
+            <button onClick={() => shiftDay(1)} disabled={isoDate >= today} title="Next day">
               ›
             </button>
             <button onClick={() => setIsoDate(today)} disabled={isoDate === today}>
-              Hôm nay
+              Today
             </button>
           </div>
         </div>
@@ -141,24 +141,24 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
             className={panel === "timeline" ? "active" : ""}
             onClick={() => setPanel(panel === "timeline" ? "none" : "timeline")}
           >
-            Nhật ký
+            Log
           </button>
           <button
             className={panel === "settings" ? "active" : ""}
             onClick={() => setPanel(panel === "settings" ? "none" : "settings")}
           >
-            Tuỳ chỉnh
+            Settings
           </button>
           {isAdmin && (
             <button
               className={panel === "admin" ? "active" : ""}
               onClick={() => setPanel(panel === "admin" ? "none" : "admin")}
             >
-              Quản trị
+              Admin
             </button>
           )}
           <button onClick={() => signOut(auth)} title={email}>
-            Đăng xuất
+            Sign out
           </button>
         </div>
       </header>
@@ -178,20 +178,20 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
           />
 
           <div className="stats">
-            {loading && <span>Đang tải…</span>}
-            {!loading && stats.usedFixes === 0 && <span>Không có dữ liệu trong ngày này.</span>}
+            {loading && <span>Loading…</span>}
+            {!loading && stats.usedFixes === 0 && <span>Nothing recorded on this day.</span>}
             {!loading && stats.usedFixes > 0 && (
               <>
-                <Stat label="Điểm" value={String(stats.usedFixes)} />
-                <Stat label="Quãng đường" value={formatDistance(stats.distanceMeters)} />
-                <Stat label="Thời lượng" value={formatDuration(stats.movingMillis)} />
-                <Stat label="Tốc độ tối đa" value={formatSpeed(stats.maxSpeed, settings.speedUnit)} />
-                <Stat label="Đoạn" value={String(track.segments.length)} />
+                <Stat label="Points" value={String(stats.usedFixes)} />
+                <Stat label="Distance" value={formatDistance(stats.distanceMeters)} />
+                <Stat label="Duration" value={formatDuration(stats.movingMillis)} />
+                <Stat label="Top speed" value={formatSpeed(stats.maxSpeed, settings.speedUnit)} />
+                <Stat label="Segments" value={String(track.segments.length)} />
                 {stats.alarms.length > 0 && (
                   <Stat label="SOS" value={String(stats.alarms.length)} highlight />
                 )}
                 {stats.droppedByAccuracy > 0 && (
-                  <Stat label="Đã lọc" value={String(stats.droppedByAccuracy)} />
+                  <Stat label="Filtered out" value={String(stats.droppedByAccuracy)} />
                 )}
               </>
             )}
@@ -201,7 +201,7 @@ function Viewer({ isAdmin, email }: { isAdmin: boolean; email: string }) {
           {devicesError && <p className="banner error">{devicesError}</p>}
           {!devicesLoading && devices.length === 0 && (
             <p className="banner">
-              Chưa có thiết bị nào gửi dữ liệu. Bật tracking trong app rồi quay lại.
+              No device has sent anything yet. Turn tracking on in the app, then come back.
             </p>
           )}
         </main>

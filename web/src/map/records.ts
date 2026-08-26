@@ -86,11 +86,11 @@ export const KIND_ORDER: readonly RecordKind[] = [
 ];
 
 export const KIND_LABELS: Record<RecordKind, string> = {
-  fix: "Vị trí",
-  screen_on: "Bật màn hình",
-  screen_off: "Tắt màn hình",
-  event: "Sự kiện khác",
-  heartbeat: "Nhịp giữ kết nối",
+  fix: "Position",
+  screen_on: "Screen on",
+  screen_off: "Screen off",
+  event: "Other event",
+  heartbeat: "Keep-alive",
   alarm: "SOS",
 };
 
@@ -133,11 +133,11 @@ export function recordSummary(record: PositionRecord): string {
 
 const NETWORK_LABELS: Record<string, string> = {
   wifi: "Wi-Fi",
-  cellular: "Di động",
+  cellular: "Cellular",
   ethernet: "Ethernet",
   vpn: "VPN",
-  other: "Khác",
-  none: "Mất mạng",
+  other: "Other",
+  none: "Offline",
 };
 
 export function networkLabel(network: string): string {
@@ -145,12 +145,12 @@ export function networkLabel(network: string): string {
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  still: "Đứng yên",
-  walking: "Đi bộ",
-  running: "Chạy",
-  on_bicycle: "Đạp xe",
-  in_vehicle: "Trên xe",
-  unknown: "Không rõ",
+  still: "Still",
+  walking: "Walking",
+  running: "Running",
+  on_bicycle: "Cycling",
+  in_vehicle: "In a vehicle",
+  unknown: "Unknown",
 };
 
 export function activityLabel(activity: string): string {
@@ -218,8 +218,9 @@ export function visibleRecords(
   return records.filter((record) => !hidden.has(recordKind(record)));
 }
 
+/** 24-hour on purpose: a tracking log is read by timestamp, not by daypart. */
 export function formatClock(timeMs: number): string {
-  return new Date(timeMs).toLocaleTimeString("vi-VN", {
+  return new Date(timeMs).toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -228,13 +229,22 @@ export function formatClock(timeMs: number): string {
 
 /** How stale a borrowed position was, phrased for a caption. */
 export function formatAge(seconds: number): string {
-  if (seconds < 60) return `đo ${seconds} giây trước`;
+  if (seconds < 60) return `measured ${seconds}s earlier`;
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `đo ${minutes} phút trước`;
+  if (minutes < 60) return `measured ${minutes} min earlier`;
   const hours = Math.round(minutes / 60);
-  return `đo ${hours} giờ trước`;
+  return `measured ${hours}h earlier`;
 }
 
+/** Spelled-out month so the day and month can never be read the wrong way round. */
 export function formatDateTime(timeMs: number): string {
-  return new Date(timeMs).toLocaleString("vi-VN");
+  return new Date(timeMs).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 }

@@ -42,7 +42,7 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
         list.sort((a, b) => a.email.localeCompare(b.email));
         setEntries(list);
       },
-      () => setMessage("Không đọc được danh sách quyền."),
+      () => setMessage("Could not load the access list."),
     );
 
     const unsubscribeConfig = onSnapshot(doc(db, "config", "access"), (snapshot) => {
@@ -58,7 +58,7 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
   const addEntry = async () => {
     const email = newEmail.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(email)) {
-      setMessage("Địa chỉ e-mail không hợp lệ.");
+      setMessage("That is not a valid e-mail address.");
       return;
     }
     setBusy(true);
@@ -72,9 +72,9 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
         addedAt: serverTimestamp(),
       });
       setNewEmail("");
-      setMessage(`Đã cấp quyền cho ${email}.`);
+      setMessage(`Granted access to ${email}.`);
     } catch {
-      setMessage("Không lưu được. Cần quyền admin.");
+      setMessage("Could not save. Admin rights required.");
     } finally {
       setBusy(false);
     }
@@ -82,16 +82,16 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
 
   const removeEntry = async (email: string) => {
     if (email === currentEmail) {
-      setMessage("Không thể tự gỡ quyền của chính mình.");
+      setMessage("You cannot remove your own access.");
       return;
     }
     setBusy(true);
     setMessage(null);
     try {
       await deleteDoc(doc(db, "access", email));
-      setMessage(`Đã gỡ ${email}.`);
+      setMessage(`Removed ${email}.`);
     } catch {
-      setMessage("Không gỡ được. Cần quyền admin.");
+      setMessage("Could not remove. Admin rights required.");
     } finally {
       setBusy(false);
     }
@@ -107,7 +107,7 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
         { merge: true },
       );
     } catch {
-      setMessage("Không đổi được. Cần quyền admin.");
+      setMessage("Could not change. Admin rights required.");
     } finally {
       setBusy(false);
     }
@@ -116,7 +116,7 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
   return (
     <div className="panel-body">
       <section>
-        <h3>Mở cho tất cả</h3>
+        <h3>Open to everyone</h3>
         <label className="field field-inline">
           <input
             type="checkbox"
@@ -125,23 +125,23 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => toggleOpenDoor(e.target.checked)}
           />
           <span>
-            <span className="field-label">Ai đăng nhập cũng xem được</span>
+            <span className="field-label">Any signed-in account can view</span>
             <span className="field-hint">
-              Bật lên thì mọi tài khoản Google đăng nhập được đều đọc toàn bộ dữ
-              liệu vị trí, không cần có tên trong danh sách dưới.
+              With this on, any Google account that can sign in reads all of the
+              location data, without being on the list below.
             </span>
           </span>
         </label>
         {openDoor && (
           <p className="warning">
-            Đang mở cho tất cả. Bất kỳ ai có link và một tài khoản Google đều xem
-            được lộ trình của bạn.
+            Currently open to everyone. Anyone with the link and a Google account
+            can see your track.
           </p>
         )}
       </section>
 
       <section>
-        <h3>Danh sách được xem</h3>
+        <h3>Who can view</h3>
         <div className="add-row">
           <input
             type="email"
@@ -154,14 +154,14 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
           />
           <select value={newRole} onChange={(e) => setNewRole(e.target.value as "viewer" | "admin")}>
             <option value="viewer">Xem</option>
-            <option value="admin">Quản trị</option>
+            <option value="admin">Admin</option>
           </select>
           <button className="primary" onClick={addEntry} disabled={busy}>
-            Thêm
+            Add
           </button>
         </div>
         <p className="field-hint">
-          Thêm được cả khi người đó chưa từng đăng nhập — quyền gắn theo e-mail.
+          Works even for someone who has never signed in — access is keyed by e-mail.
         </p>
 
         <ul className="access-list">
@@ -169,25 +169,25 @@ export function AdminPanel({ currentEmail }: { currentEmail: string }) {
             <li key={entry.email}>
               <span className="access-email">
                 {entry.email}
-                {entry.email === currentEmail && <em> (bạn)</em>}
+                {entry.email === currentEmail && <em> (you)</em>}
               </span>
               <span className={`badge ${entry.role}`}>
-                {entry.role === "admin" ? "Quản trị" : "Xem"}
+                {entry.role === "admin" ? "Admin" : "Viewer"}
               </span>
               <button
                 onClick={() => removeEntry(entry.email)}
                 disabled={busy || entry.email === currentEmail}
                 title={
                   entry.email === currentEmail
-                    ? "Không thể tự gỡ quyền của chính mình"
-                    : "Gỡ quyền"
+                    ? "You cannot remove your own access"
+                    : "Remove access"
                 }
               >
-                Gỡ
+                Remove
               </button>
             </li>
           ))}
-          {entries.length === 0 && <li className="muted">Chưa có ai trong danh sách.</li>}
+          {entries.length === 0 && <li className="muted">Nobody on the list yet.</li>}
         </ul>
       </section>
 
