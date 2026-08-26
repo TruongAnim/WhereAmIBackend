@@ -1,5 +1,5 @@
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
 import { DEFAULT_SETTINGS, mergeSettings, type MapSettings } from "./settings";
 
@@ -45,10 +45,16 @@ export function useSettings(): SettingsState {
     return unsubscribe;
   }, []);
 
-  const remoteDefaults = mergeSettings(DEFAULT_SETTINGS, remoteRaw);
-  const settings = mergeSettings(
-    remoteDefaults,
-    overrides as unknown as Record<string, unknown>,
+  // Memoised because identity matters downstream: the map keys its redraw on
+  // this object, and a fresh one per render tore down and rebuilt every layer
+  // on the map each time any unrelated state changed.
+  const remoteDefaults = useMemo(
+    () => mergeSettings(DEFAULT_SETTINGS, remoteRaw),
+    [remoteRaw],
+  );
+  const settings = useMemo(
+    () => mergeSettings(remoteDefaults, overrides as unknown as Record<string, unknown>),
+    [remoteDefaults, overrides],
   );
 
   const update = useCallback((patch: Partial<MapSettings>) => {

@@ -71,7 +71,7 @@ export function MapView({
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const overlayRef = useRef<L.LayerGroup | null>(null);
-  const selectionRef = useRef<L.CircleMarker | null>(null);
+  const selectionRef = useRef<L.LayerGroup | null>(null);
   /** Guards the initial fit so panning is not stolen back on every update. */
   const fittedKeyRef = useRef<string | null>(null);
   // Held in a ref so redrawing does not depend on the callback's identity.
@@ -93,13 +93,18 @@ export function MapView({
     });
     mapRef.current = map;
     overlayRef.current = L.layerGroup().addTo(map);
+    // Its own group, created once. The ring used to be added straight to the
+    // map while the redraw below cleared the overlay and blanked the ref that
+    // pointed at it - so the ring was left on the map with nothing holding it,
+    // and every new selection added another one that could never be removed.
+    selectionRef.current = L.layerGroup().addTo(map);
 
     return () => {
       map.remove();
       mapRef.current = null;
       overlayRef.current = null;
-      tileRef.current = null;
       selectionRef.current = null;
+      tileRef.current = null;
     };
   }, []);
 
@@ -121,7 +126,6 @@ export function MapView({
     if (!map || !overlay) return;
 
     overlay.clearLayers();
-    selectionRef.current = null;
 
     const bounds = L.latLngBounds([]);
     let first: Fix | null = null;
@@ -242,23 +246,25 @@ export function MapView({
   // so it survives a redraw without having to remember every base style.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const selection = selectionRef.current;
+    if (!map || !selection) return;
 
-    selectionRef.current?.remove();
-    selectionRef.current = null;
+    // Emptying the group is what makes "one ring at a time" true no matter how
+    // often this runs. Nothing outside this effect ever puts a layer in it.
+    selection.clearLayers();
 
     const record = selectedId === null ? undefined : byId.get(selectedId);
     if (!record || record.lat === null || record.lon === null) return;
 
     const latLng = L.latLng(record.lat, record.lon);
-    selectionRef.current = L.circleMarker(latLng, {
+    L.circleMarker(latLng, {
       radius: 15,
       color: KIND_COLORS[recordKind(record)],
       weight: 3,
       opacity: 0.9,
       fill: false,
       interactive: false,
-    }).addTo(map);
+    }).addTo(selection);
 
     // Only chase a point that is off screen. Recentring on a dot the reader
     // just clicked would yank the map for no reason.
